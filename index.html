@@ -525,6 +525,7 @@ function getSlots(){
     const s=slots.find(x=>x.t==='08:00');
     if(s)s.items.unshift({id:'glucose_sun',cat:'care',act:{ar:'قياس سكر الدم وتسجيل القراءة',en:'Blood Glucose Check — record reading'}});
   }
+  slots.sort((a,b)=>hm2min(a.t)-hm2min(b.t)); // chronological order — starts at 12:00 AM (00:00)
   return slots;
 }
 function flatItems(){const m={};getSlots().forEach(s=>s.items.forEach(it=>{m[it.id]={...it,slot:s.t};}));return m;}
