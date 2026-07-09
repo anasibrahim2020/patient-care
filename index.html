@@ -71,6 +71,11 @@ body::-webkit-scrollbar-thumb{background:#cfd4dc;border-radius:8px;border:3px so
 .acc.open .acc-chev{transform:rotate(180deg)}
 .acc .acc-body{display:none;margin-top:10px;border-top:1px solid var(--line2);padding-top:8px}
 .acc.open .acc-body{display:block}
+.med-photo{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:5px;align-self:flex-start}
+.med-thumb{width:48px;height:48px;border-radius:9px;object-fit:cover;border:1px solid var(--line);cursor:pointer;background:#eef1f5}
+.med-cam{display:inline-flex;flex-direction:column;align-items:center;gap:2px;width:56px;padding:5px 4px;border:1px dashed var(--line);border-radius:9px;cursor:pointer;color:var(--mut);font-size:.6rem;font-weight:700;text-align:center;line-height:1.1;background:var(--pill)}
+.med-cam.add{color:var(--accent);border-color:#cfe0f5}
+.med-cam svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 
 /* Tabs */
 .tabs{background:var(--card);border-bottom:1px solid var(--line);display:flex;position:sticky;top:0;z-index:99;overflow-x:auto;scrollbar-width:none}
@@ -437,7 +442,7 @@ let appRole='viewer';
 const noted=new Set();
 // ---- Live shared state (real-time collaborative) ----
 const _lsSet=localStorage.setItem.bind(localStorage);
-const SYNC_RE=/^(meds_|supp_|sess_|notes$|supplies$|last_bm$|vitD_next$|sh$|sm$)/;
+const SYNC_RE=/^(meds_|supp_|sess_|notes$|supplies$|last_bm$|vitD_next$|sh$|sm$|medphoto_)/;
 let _applyingRemote=false,_syncReady=false;
 localStorage.setItem=function(k,v){_lsSet(k,v);if(_syncReady&&!_applyingRemote&&SYNC_RE.test(k))pushState(k,v);};
 function pushState(k,v){
@@ -626,7 +631,11 @@ function loadData(){
   try{ST.actionLog=JSON.parse(localStorage.getItem(`acts_${TODAY}`)||'[]');}catch(e){ST.actionLog=[];}
   try{ST.notes=JSON.parse(localStorage.getItem('notes')||'[]');}catch(e){ST.notes=[];}
   try{ST.supplies=JSON.parse(localStorage.getItem('supplies')||'[]');}catch(e){ST.supplies=[];}
-  ST.supplies=ST.supplies.map(s=>('stock'in s)?s:{id:s.id,name:s.name,stock:s.qty||0,used:0});
+  ST.supplies=ST.supplies.map(s=>{
+    const it=('stock'in s)?s:{id:s.id,name:s.name,stock:s.qty||0,used:0};
+    if(!it.type)it.type=classifySupply(it.name); // auto-sort legacy items into Meds vs Supplies
+    return it;
+  });
   try{ST.vitals=JSON.parse(localStorage.getItem(`vitals_${TODAY}`)||'[]');}catch(e){ST.vitals=[];}
 }
 function logAct(type,detail){
@@ -1121,6 +1130,14 @@ function rTask(it){
      <label class="cline"><input type="checkbox" id="fl_${it.id}"> ${L('تم الإرواء (Flush) بعد الدواء','Flush done after')}</label>
    </div>`:'';
   const doneNote=d?`<div class="donenote">${L('تم','Done')} · ${ft(d.at)}${d.crushed?' · '+L('طُحن','crushed'):''}${d.flushed?' · Flush ✓':''}</div>`:'';
+  // Box photo (medications only): thumbnail (tap to zoom) + admin upload/change control
+  let photoCell='';
+  if(it.cat!=='care'){
+    const purl=medPhotoUrl(it);
+    const camSvg='<svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><circle cx="12" cy="13.5" r="3.4"/><path d="M8.5 7l1.3-2.3h4.4L15.5 7"/></svg>';
+    if(purl)photoCell+=`<img class="med-thumb" src="${purl}" onclick="openLBUrl('${purl}')" alt="">`;
+    if(canManage())photoCell+=`<label class="med-cam${purl?'':' add'}">${camSvg}<span>${purl?L('تغيير','Change'):L('صورة العلبة','Box photo')}</span><input type="file" accept="image/*" onchange="uploadMedPhoto('${it.id}',this)" style="display:none"></label>`;
+  }
   return `<div class="task ${d?'done':''}">
     <button class="chk" onclick="toggleTask('${it.id}')">${d?'✓':''}</button>
     <div class="t-main">
@@ -1129,6 +1146,7 @@ function rTask(it){
       ${badges.length?`<div class="t-badges">${badges.join('')}</div>`:''}
       ${confirm}${doneNote}
     </div>
+    ${photoCell?`<div class="med-photo">${photoCell}</div>`:''}
   </div>`;
 }
 async function toggleTask(id){
@@ -1390,6 +1408,15 @@ async function delVital(id){
 
 // ============ SUPPLIES TAB ============
 function supRem(s){return Math.max(0,(s.stock||0)-(s.used||0));}
+// Auto-classify an item as medication vs supply (used for items added before the Type field existed)
+const MED_TOKENS=['ipratropium','atrovent','nebusal','sodium chloride','saline','clopidogrel','pido','linagliptin','trajenta','bisoprolol','lansoprazole','levetiracetam','keppra','chlorhexidine','mouthwash','mouth wash','polyethylene','glycol','movicol','senna','simethicone','flat-q','clonazepam','clonotril','bisacodyl','cholecalciferol','vitamin'];
+function classifySupply(name){
+  const t=(name||'').toLowerCase();
+  if(MED_TOKENS.some(tok=>t.indexOf(tok)>-1))return 'med';
+  if(/(tablet|tabs?|capsule|caps?|syrup|suspension|sachet|ampoule|injection|ointment|nebuli|drops|suppositor)/.test(t))return 'med';
+  if(/\b\d+\s?(mg|mcg|iu)\b/.test(t))return 'med';
+  return 'supply';
+}
 function rSupplies(){
   const list=ST.supplies.map(s=>({...s,rem:supRem(s)})).sort((a,b)=>a.rem-b.rem);
   let html='';
@@ -1573,6 +1600,40 @@ function pickImg(inp){
   r.readAsDataURL(f);
 }
 function clearImg(){pendingImg=null;document.getElementById('attachWrap').innerHTML='';}
+// ---- Medication box photos (stored in Supabase Storage, keyed by drug) ----
+function medSlug(it){return ((it&&(it.med||itemTitle(it)))||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'').slice(0,60)||'x';}
+function medPhotoUrl(it){try{return localStorage.getItem('medphoto_'+medSlug(it))||'';}catch(e){return '';}}
+function openLBUrl(u){if(!u)return;document.getElementById('lbImg').src=u;document.getElementById('lightbox').classList.add('op');}
+async function uploadMedPhoto(id,inp){
+  if(!requireManager())return;
+  const f=inp.files&&inp.files[0];if(!f)return;
+  const meta=flatItems()[id];if(!meta)return;
+  if(!sb){toast(L('يتطلب اتصالاً بالسحابة','Cloud connection required'),'warn');return;}
+  const slug=medSlug(meta);
+  toast(L('جارٍ رفع الصورة…','Uploading photo…'),'');
+  const r=new FileReader();
+  r.onload=e=>{
+    const img=new Image();
+    img.onload=()=>{
+      const max=1000;let w=img.width,h=img.height;
+      if(w>max||h>max){const sc=Math.min(max/w,max/h);w=Math.round(w*sc);h=Math.round(h*sc);}
+      const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);
+      c.toBlob(async blob=>{
+        if(!blob){toast(L('تعذّرت معالجة الصورة','Could not process image'),'err');return;}
+        try{
+          const path=slug+'.jpg';
+          const{error}=await sb.storage.from('med-photos').upload(path,blob,{upsert:true,contentType:'image/jpeg'});
+          if(error){toast(L('فشل الرفع: ','Upload failed: ')+error.message,'err');return;}
+          const url=sb.storage.from('med-photos').getPublicUrl(path).data.publicUrl+'?v='+Date.now();
+          localStorage.setItem('medphoto_'+slug,url); // syncs live to all devices
+          render();toast(L('تم حفظ صورة العلبة','Box photo saved'),'ok');
+        }catch(err){toast(L('فشل رفع الصورة','Upload failed'),'err');}
+      },'image/jpeg',0.72);
+    };
+    img.src=e.target.result;
+  };
+  r.readAsDataURL(f);
+}
 function addNote(){
   if(!requireEditor())return;
   const txt=document.getElementById('noteTxt').value.trim();
