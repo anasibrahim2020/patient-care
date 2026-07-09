@@ -73,6 +73,7 @@ body::-webkit-scrollbar-thumb{background:#cfd4dc;border-radius:8px;border:3px so
 .acc.open .acc-body{display:block}
 .med-photo{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:5px;align-self:flex-start}
 .med-thumb{width:48px;height:48px;border-radius:9px;object-fit:cover;border:1px solid var(--line);cursor:pointer;background:#eef1f5}
+.med-thumb-sm{width:30px;height:30px;border-radius:6px;object-fit:cover;vertical-align:middle;border:1px solid var(--line);cursor:pointer;margin-inline-start:6px}
 .med-cam{display:inline-flex;flex-direction:column;align-items:center;gap:2px;width:56px;padding:5px 4px;border:1px dashed var(--line);border-radius:9px;cursor:pointer;color:var(--mut);font-size:.6rem;font-weight:700;text-align:center;line-height:1.1;background:var(--pill)}
 .med-cam.add{color:var(--accent);border-color:#cfe0f5}
 .med-cam svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
@@ -442,7 +443,7 @@ let appRole='viewer';
 const noted=new Set();
 // ---- Live shared state (real-time collaborative) ----
 const _lsSet=localStorage.setItem.bind(localStorage);
-const SYNC_RE=/^(meds_|supp_|sess_|notes$|supplies$|last_bm$|vitD_next$|sh$|sm$|medphoto_)/;
+const SYNC_RE=/^(meds_|supp_|sess_|notes$|supplies$|last_bm$|vitD_next$|sh$|sm$)/;
 let _applyingRemote=false,_syncReady=false;
 localStorage.setItem=function(k,v){_lsSet(k,v);if(_syncReady&&!_applyingRemote&&SYNC_RE.test(k))pushState(k,v);};
 function pushState(k,v){
@@ -633,7 +634,8 @@ function loadData(){
   try{ST.supplies=JSON.parse(localStorage.getItem('supplies')||'[]');}catch(e){ST.supplies=[];}
   ST.supplies=ST.supplies.map(s=>{
     const it=('stock'in s)?s:{id:s.id,name:s.name,stock:s.qty||0,used:0};
-    if(!it.type)it.type=classifySupply(it.name); // auto-sort legacy items into Meds vs Supplies
+    if(isKnownPatientMed(it.name))it.type='med';       // the patient's real meds always go to the Medications section
+    else if(!it.type)it.type=classifySupply(it.name);  // auto-sort remaining legacy items
     return it;
   });
   try{ST.vitals=JSON.parse(localStorage.getItem(`vitals_${TODAY}`)||'[]');}catch(e){ST.vitals=[];}
@@ -980,7 +982,7 @@ function rNow(){
     const hasMed=pend.some(it=>it.cat!=='care');
     const actTitle=hasMed?L('مطلوب الآن — أدوية','Due now — Medication'):L('مطلوب الآن — رعاية','Due now — Care');
     html+=`<div class="act ${st==='late'?'late':''}"><div class="act-top"><span class="act-title">${actTitle}</span><span class="pill ${st==='late'?'p-late':'p-due'}">${to12(s.t)} · ${tx(STLABEL[st])}</span></div>
-      <ul class="act-list">${pend.map(it=>`<li>${itemTitle(it)}${it.cat==='care'&&it.position?` — <strong>${tx(it.position)}</strong>`:''}${it.route?` <span class="chip">${it.route}</span>`:''}</li>`).join('')}</ul>
+      <ul class="act-list">${pend.map(it=>{const ph=drugPhoto(it);return `<li>${itemTitle(it)}${it.cat==='care'&&it.position?` — <strong>${tx(it.position)}</strong>`:''}${it.route?` <span class="chip">${it.route}</span>`:''}${ph?` <img class="med-thumb-sm" src="${ph}" onclick="openLBUrl('${ph}')" alt="">`:''}</li>`;}).join('')}</ul>
       ${inst.length?`<div style="margin-top:10px">${inst.map(i=>`<div class="mini-inst">• ${i}</div>`).join('')}</div>`:''}
       <div style="margin-top:11px"><button class="btn btn-p btn-sm" onclick="goTab('meds')">${L('فتح الأدوية','Open Meds')}</button></div></div>`;
   });
@@ -1130,13 +1132,11 @@ function rTask(it){
      <label class="cline"><input type="checkbox" id="fl_${it.id}"> ${L('تم الإرواء (Flush) بعد الدواء','Flush done after')}</label>
    </div>`:'';
   const doneNote=d?`<div class="donenote">${L('تم','Done')} · ${ft(d.at)}${d.crushed?' · '+L('طُحن','crushed'):''}${d.flushed?' · Flush ✓':''}</div>`:'';
-  // Box photo (medications only): thumbnail (tap to zoom) + admin upload/change control
+  // Box photo (medications only) — sourced from the matching Supplies item; tap to zoom
   let photoCell='';
   if(it.cat!=='care'){
-    const purl=medPhotoUrl(it);
-    const camSvg='<svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><circle cx="12" cy="13.5" r="3.4"/><path d="M8.5 7l1.3-2.3h4.4L15.5 7"/></svg>';
-    if(purl)photoCell+=`<img class="med-thumb" src="${purl}" onclick="openLBUrl('${purl}')" alt="">`;
-    if(canManage())photoCell+=`<label class="med-cam${purl?'':' add'}">${camSvg}<span>${purl?L('تغيير','Change'):L('صورة العلبة','Box photo')}</span><input type="file" accept="image/*" onchange="uploadMedPhoto('${it.id}',this)" style="display:none"></label>`;
+    const purl=drugPhoto(it);
+    if(purl)photoCell=`<img class="med-thumb" src="${purl}" onclick="openLBUrl('${purl}')" alt="">`;
   }
   return `<div class="task ${d?'done':''}">
     <button class="chk" onclick="toggleTask('${it.id}')">${d?'✓':''}</button>
@@ -1417,6 +1417,15 @@ function classifySupply(name){
   if(/\b\d+\s?(mg|mcg|iu)\b/.test(t))return 'med';
   return 'supply';
 }
+// The patient's actual scheduled medications — these ALWAYS belong in the Medications section.
+let _schedTokens=null;
+function schedMedTokens(){
+  if(_schedTokens)return _schedTokens;
+  const set=new Set();
+  try{SCHED.forEach(s=>s.items.forEach(it=>{if(it.cat==='care')return;[it.med,it.com].forEach(n=>{if(n){const t=normName(n);if(t.length>=4)set.add(t);}});}));}catch(e){}
+  _schedTokens=[...set];return _schedTokens;
+}
+function isKnownPatientMed(name){const sn=normName(name);if(sn.length<4)return false;return schedMedTokens().some(t=>t.includes(sn)||sn.includes(t));}
 function rSupplies(){
   const list=ST.supplies.map(s=>({...s,rem:supRem(s)})).sort((a,b)=>a.rem-b.rem);
   let html='';
@@ -1492,6 +1501,7 @@ function rSupply(s){
   const col=showOut?'var(--late)':low?'var(--due)':'var(--mut)';
   return `<div class="card sup-card" data-sname="${esc((s.name||'').toLowerCase())}" data-stype="${s.type==='med'?'med':'supply'}" data-slow="${low?1:0}" style="${showOut?'border-color:var(--late-l);background:var(--late-bg)':low?'border-color:var(--due-l);background:var(--due-bg)':''}">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+      ${s.photo?`<img class="med-thumb" src="${s.photo}" onclick="openLBUrl('${s.photo}')" alt="" style="width:54px;height:54px;flex-shrink:0">`:''}
       <div style="min-width:0;flex:1">
         <div style="font-weight:800;font-size:.95rem">${esc(s.name)}${status?` <span class="pill ${showOut?'p-late':'p-due'}" style="margin-inline-start:4px">${status}</span>`:''}</div>
         <div class="small" style="margin-top:5px;color:${col};font-weight:700">${L('المتبقي','Remaining')}: ${rem} / ${s.stock||0}</div>
@@ -1506,6 +1516,7 @@ function rSupply(s){
       ${canEdit()?`<button class="btn btn-p btn-sm" style="flex:1;min-width:130px" ${out?'disabled':''} onclick="useBox('${s.id}')">${L('خلصت علبة','Box finished')}</button>`:''}
       ${canManage()?`<button class="btn btn-o btn-sm" onclick="restock('${s.id}')">${L('توريد +1','Restock +1')}</button>
       <button class="btn btn-o btn-sm" onclick="editStock('${s.id}')">${L('تعديل','Edit')}</button>
+      <label class="btn btn-o btn-sm" style="display:inline-flex;align-items:center;gap:5px;cursor:pointer"><svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><rect x="3" y="7" width="18" height="13" rx="2"/><circle cx="12" cy="13.5" r="3.4"/><path d="M8.5 7l1.3-2.3h4.4L15.5 7"/></svg>${s.photo?L('تغيير الصورة','Change photo'):L('صورة العلبة','Box photo')}<input type="file" accept="image/*" onchange="uploadSupPhoto('${s.id}',this)" style="display:none"></label>
       <button class="btn btn-o btn-sm" onclick="toggleSupType('${s.id}')">${s.type==='med'?L('↦ للمستهلكات','↦ to Supplies'):L('↦ للأدوية','↦ to Meds')}</button>
       <button class="btn btn-d btn-sm" onclick="delSupply('${s.id}')">${L('حذف','Delete')}</button>`:''}
     </div>
@@ -1600,16 +1611,27 @@ function pickImg(inp){
   r.readAsDataURL(f);
 }
 function clearImg(){pendingImg=null;document.getElementById('attachWrap').innerHTML='';}
-// ---- Medication box photos (stored in Supabase Storage, keyed by drug) ----
-function medSlug(it){return ((it&&(it.med||itemTitle(it)))||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'').slice(0,60)||'x';}
-function medPhotoUrl(it){try{return localStorage.getItem('medphoto_'+medSlug(it))||'';}catch(e){return '';}}
+// ---- Box photos: uploaded on a Supplies item, shown wherever that drug appears ----
 function openLBUrl(u){if(!u)return;document.getElementById('lbImg').src=u;document.getElementById('lightbox').classList.add('op');}
-async function uploadMedPhoto(id,inp){
+function normName(x){return (x||'').toLowerCase().replace(/[^a-z0-9]/g,'');}
+// Find a box photo for a schedule medication by matching its name to a stocked supply item.
+function drugPhoto(it){
+  if(!it||it.cat==='care')return '';
+  const targets=[it.med,it.com].filter(Boolean).map(normName).filter(t=>t.length>=4);
+  if(!targets.length)return '';
+  for(const s of ST.supplies){
+    if(!s.photo)continue;
+    const sn=normName(s.name);
+    if(sn.length<4)continue;
+    if(targets.some(t=>t.includes(sn)||sn.includes(t)))return s.photo;
+  }
+  return '';
+}
+async function uploadSupPhoto(id,inp){
   if(!requireManager())return;
   const f=inp.files&&inp.files[0];if(!f)return;
-  const meta=flatItems()[id];if(!meta)return;
+  const s=ST.supplies.find(x=>x.id===id);if(!s)return;
   if(!sb){toast(L('يتطلب اتصالاً بالسحابة','Cloud connection required'),'warn');return;}
-  const slug=medSlug(meta);
   toast(L('جارٍ رفع الصورة…','Uploading photo…'),'');
   const r=new FileReader();
   r.onload=e=>{
@@ -1621,12 +1643,11 @@ async function uploadMedPhoto(id,inp){
       c.toBlob(async blob=>{
         if(!blob){toast(L('تعذّرت معالجة الصورة','Could not process image'),'err');return;}
         try{
-          const path=slug+'.jpg';
+          const path='sup-'+id+'.jpg';
           const{error}=await sb.storage.from('med-photos').upload(path,blob,{upsert:true,contentType:'image/jpeg'});
           if(error){toast(L('فشل الرفع: ','Upload failed: ')+error.message,'err');return;}
-          const url=sb.storage.from('med-photos').getPublicUrl(path).data.publicUrl+'?v='+Date.now();
-          localStorage.setItem('medphoto_'+slug,url); // syncs live to all devices
-          render();toast(L('تم حفظ صورة العلبة','Box photo saved'),'ok');
+          s.photo=sb.storage.from('med-photos').getPublicUrl(path).data.publicUrl+'?v='+Date.now();
+          saveSupplies();render();toast(L('تم حفظ الصورة','Photo saved'),'ok'); // s.photo syncs with supplies
         }catch(err){toast(L('فشل رفع الصورة','Upload failed'),'err');}
       },'image/jpeg',0.72);
     };
