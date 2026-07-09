@@ -1,6 +1,6 @@
 // Bump this on every deploy to invalidate the old cache.
-const CACHE_NAME = "patient-care-v4";
-const APP_SHELL = ["/", "/index.html", "/manifest.json", "/icon.svg"];
+const CACHE_NAME = "patient-care-v5";
+const APP_SHELL = ["/", "/index.html", "/manifest.json", "/icon.svg", "/icon-192.png", "/icon-512.png", "/badge-96.png"];
 
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)).catch(() => {}));
@@ -24,8 +24,8 @@ self.addEventListener("push", event => {
   try { d = event.data.json(); } catch (_) { if (event.data) d.body = event.data.text(); }
   event.waitUntil(self.registration.showNotification(d.title || "رعاية المريض", {
     body: d.body || "",
-    icon: "/icon.svg",
-    badge: "/icon.svg",
+    icon: "/icon-192.png",
+    badge: "/badge-96.png",
     tag: d.tag || "care-reminder",
     renotify: true,
     dir: "auto",

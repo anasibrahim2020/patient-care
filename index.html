@@ -282,6 +282,13 @@ body.ar .card.b{box-shadow:var(--shadow),inset -3px 0 0 var(--accent)}
 /* Toast */
 .toast{position:fixed;top:15px;inset-inline:15px;background:var(--ink);color:#fff;padding:13px 17px;border-radius:12px;font-size:.87rem;font-weight:700;z-index:400;text-align:center;pointer-events:none;transform:translateY(-24px);opacity:0;transition:all .28s;max-width:612px;margin:0 auto}
 .toast.vis{transform:translateY(0);opacity:1}
+.innote{position:fixed;top:calc(12px + env(safe-area-inset-top));inset-inline:12px;max-width:560px;margin:0 auto;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 34px rgba(16,24,40,.22);z-index:420;display:flex;align-items:center;gap:12px;padding:12px 14px;transform:translateY(-140%);opacity:0;transition:transform .32s cubic-bezier(.2,.8,.2,1),opacity .32s}
+.innote.vis{transform:translateY(0);opacity:1}
+.innote-ic{width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,#2b5aa0,#1e3f70);flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.innote-ic svg{width:23px;height:23px;stroke:#fff;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.innote-tx{min-width:0;flex:1}
+.innote-t{font-weight:800;font-size:.9rem;color:var(--ink);line-height:1.2}
+.innote-b{font-size:.82rem;color:var(--mut);font-weight:600;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .toast.ok{background:var(--ok)}.toast.err{background:var(--late)}.toast.warn{background:var(--due)}
 .empty{text-align:center;padding:28px 16px;color:var(--mut);font-size:.85rem}
 .warn-note{background:var(--due-bg);border:2px solid var(--due);border-radius:14px;padding:14px 16px;margin-bottom:12px;color:#7a4600;font-weight:800;font-size:.9rem;line-height:1.65;display:flex;gap:10px;align-items:flex-start}
@@ -295,6 +302,7 @@ body.ar .card.b{box-shadow:var(--shadow),inset -3px 0 0 var(--accent)}
 .ov-tile.t-amber{background:#fbf3e5;border-color:#f3e1c6}
 .ov-lbl{font-size:.72rem;color:var(--mut);font-weight:800}
 .ov-big{font-size:1.45rem;font-weight:800;margin:4px 0 2px;line-height:1.1;direction:ltr}
+.ov-big.txt{font-size:1rem;line-height:1.25;direction:inherit;white-space:normal}
 .ov-sub{font-size:.68rem;color:var(--mut);direction:ltr;line-height:1.4}
 @media(min-width:820px){.ov-grid{grid-template-columns:repeat(4,1fr)}}
 
@@ -319,6 +327,10 @@ body.ar .card.b{box-shadow:var(--shadow),inset -3px 0 0 var(--accent)}
 <body>
 <div id="boot"><div class="boot-mark"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 1.2-.4 2.3-1 3.3"/><path d="M8.5 13H11l1.3-2.2L14 15l1.2-2h3.3"/></svg></div></div>
 <div id="toast" class="toast"></div>
+<div id="inNote" class="innote" role="status" aria-live="polite">
+  <div class="innote-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 1.2-.4 2.3-1 3.3"/><path d="M8.5 13H11l1.3-2.2L14 15l1.2-2h3.3"/></svg></div>
+  <div class="innote-tx"><div class="innote-t" id="inNoteT"></div><div class="innote-b" id="inNoteB"></div></div>
+</div>
 
 <header class="hdr">
   <div class="hdr-top">
@@ -418,7 +430,6 @@ let supFilter='all';     // 'all' | 'med' | 'supply' — supplies tab filter
 let supQuery='';         // supplies tab search text (lowercased)
 const nowOpenSlots=new Set(); // expanded "Coming Up" slots on the Now tab (keyed by slot)
 let notifOn=localStorage.getItem('notif')==='1';
-let mgr=false;
 const SID=Math.random().toString(36).slice(2)+Date.now().toString(36);
 let _rt=null;
 let currentUser=null;
@@ -584,8 +595,11 @@ const STLABEL={upcoming:{ar:'قادم',en:'Upcoming'},due:{ar:'الآن',en:'Now
 
 // ============ SESSIONS ============
 function buildSessions(){
-  return Array.from({length:6},(_,i)=>{
-    const tot=(ST.sh*60+ST.sm)+i*240,h=Math.floor(tot/60)%24,m=tot%60;
+  const base=ST.sh*60+ST.sm;
+  // 6 feeds spaced 4h, mapped onto a single day and ordered by clock (day starts at 12:00 AM)
+  const mins=Array.from({length:6},(_,k)=>((base+k*240)%1440)).sort((a,b)=>a-b);
+  return mins.map((tm,i)=>{
+    const h=Math.floor(tm/60),m=tm%60;
     const key=`sess_${TODAY}_${i+1}`;
     let sv=null;try{sv=JSON.parse(localStorage.getItem(key));}catch(e){}
     return {n:i+1,h,m,t:`${p2(h)}:${p2(m)}`,steps:sv?.steps||[0,0,0,0,0],times:sv?.times||[null,null,null,null,null],key};
@@ -1019,7 +1033,8 @@ function toggleUpSlot(k){const c=document.getElementById('up_'+k);if(!c)return;c
 
 function ovTile(label,big,sub,flag,tone){
   const col=flag==='late'?'var(--late)':(tone?`var(--tone-${tone})`:'var(--ink)');
-  return `<div class="ov-tile${tone?' t-'+tone:''}"><div class="ov-lbl">${label}</div><div class="ov-big" style="color:${col}">${big}</div><div class="ov-sub">${sub}</div></div>`;
+  const isTxt=String(big).length>6&&/[^\d\/\s.\-—:]/.test(String(big)); // long text value (e.g. a position) — not a short number
+  return `<div class="ov-tile${tone?' t-'+tone:''}"><div class="ov-lbl">${label}</div><div class="ov-big${isTxt?' txt':''}" style="color:${col}">${big}</div><div class="ov-sub">${sub}</div></div>`;
 }
 
 // ============ REMINDERS TAB ============
@@ -1331,7 +1346,7 @@ function rVitals(){
     <div class="sec-lbl">${L('تسجيل قياسات جديدة','Record New Reading')}</div>
     <div class="card">
       <div class="grid2">
-        ${VITAL_DEF.map(v=>`<div class="fg"><label>${tx(v)} (${v.unit})</label><input id="vt_${v.k}" type="number" inputmode="decimal" ${v.step?`step="${v.step}"`:''} placeholder="${v.ph}" dir="ltr"></div>`).join('')}
+        ${VITAL_DEF.map(v=>`<div class="fg"><label>${tx(v)} (<bdi dir="ltr">${v.unit}</bdi>)</label><input id="vt_${v.k}" type="number" inputmode="decimal" ${v.step?`step="${v.step}"`:''} placeholder="${v.ph}" dir="ltr"></div>`).join('')}
       </div>
       <div class="grid2">
         <div class="fg"><label>${L('البول','Urine')}</label><select id="vt_urine" onchange="excretaToggle('urine')"><option value="">${L('— لم يُسجّل','— not recorded')}</option><option value="none">${L('لم يتبوّل','No urine')}</option><option value="normal">${L('تبوّل — طبيعي','Passed — normal')}</option><option value="abnormal">${L('تبوّل — فيه مشكلة','Passed — problem')}</option></select></div>
@@ -1517,20 +1532,6 @@ async function delSupply(id){
   if(!(await uiConfirm(L('حذف الصنف نهائيًا؟','Delete this item?'),{danger:true,ok:L('حذف','Delete')})))return;
   ST.supplies=ST.supplies.filter(x=>x.id!==id);saveSupplies();render();
 }
-async function enterMgr(){
-  if(!requireEditor())return;
-  let pass=localStorage.getItem('mgrPass');
-  if(!pass){
-    const np=await uiPrompt(L('أنشئ كلمة مرور مدير النظام:','Create a manager password:'),{password:true});
-    if(np===null||!np.trim())return;
-    localStorage.setItem('mgrPass',np.trim());mgr=true;render();toast(L('تم إنشاء كلمة المرور وتفعيل وضع المدير','Manager password set'),'ok');return;
-  }
-  const v=await uiPrompt(L('كلمة مرور المدير:','Manager password:'),{password:true});
-  if(v===null)return;
-  if(v===pass){mgr=true;render();toast(L('تم الدخول كمدير النظام','Manager mode on'),'ok');}
-  else toast(L('كلمة المرور غير صحيحة','Wrong password'),'err');
-}
-function exitMgr(){mgr=false;render();toast(L('تم الخروج من وضع المدير','Manager mode off'),'');}
 
 // ============ NOTES TAB ============
 function rNotes(){
@@ -1550,7 +1551,7 @@ function rNotes(){
 }
 function rNote(n){
   return `<div class="note">
-    <div class="note-h"><span>${ft(n.at)} · ${new Date(n.at).toLocaleDateString(ST.lang==='ar'?'ar':'en-GB')}</span><button class="note-del" onclick="delNote('${n.id}')">${L('حذف','Delete')}</button></div>
+    <div class="note-h"><span>${new Date(n.at).toLocaleDateString(ST.lang==='ar'?'ar':'en-GB',{day:'numeric',month:'long',year:'numeric'})} · <bdi dir="ltr">${ft(n.at)}</bdi></span><button class="note-del" onclick="delNote('${n.id}')">${L('حذف','Delete')}</button></div>
     ${n.text?`<div class="note-txt">${esc(n.text)}</div>`:''}
     ${n.img?`<img class="note-img" src="${n.img}" onclick="openLB('${n.id}')">`:''}
   </div>`;
@@ -1792,7 +1793,7 @@ function checkNotifs(){
     if(dd===0)fire(`rem${r.key}0_${TODAY}`,L('تذكير اليوم','Reminder today'),tx(r.label));
   });
 }
-function fire(key,title,body){if(noted.has(key))return;noted.add(key);try{new Notification(title,{body});}catch(e){}}
+function fire(key,title,body){if(noted.has(key))return;noted.add(key);try{new Notification(title,{body,icon:'/icon-192.png',badge:'/badge-96.png',tag:key});}catch(e){}}
 
 // ============ SUPABASE SYNC ============
 async function syncDown(){
@@ -2010,6 +2011,13 @@ function printReportFor(date){
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 let tt;
 function toast(msg,type=''){const e=document.getElementById('toast');e.textContent=msg;e.className=`toast vis ${type}`;clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('vis'),2600);}
+let _int=null;
+function inNote(title,body){
+  const c=document.getElementById('inNote');if(!c)return;
+  document.getElementById('inNoteT').textContent=title;
+  document.getElementById('inNoteB').textContent=body||'';
+  c.classList.add('vis');clearTimeout(_int);_int=setTimeout(()=>c.classList.remove('vis'),4200);
+}
 
 // ---- Professional confirm / prompt dialogs ----
 let _uiRes=null,_uiMode='confirm';
@@ -2042,8 +2050,8 @@ function uiPrompt(msg,opt){opt=opt||{};return new Promise(res=>{
 // ---- Notify other users/sessions on any log ----
 let _bc=null;try{_bc=new BroadcastChannel('care-log');_bc.onmessage=e=>{if(e&&e.data&&e.data.detail)notifyOthers(e.data.detail);};}catch(e){}
 function notifyOthers(detail){
-  toast(L('تسجيل جديد: ','New entry: ')+detail,'');
-  if(notifOn&&'Notification'in window&&Notification.permission==='granted'){try{new Notification(L('تسجيل جديد في رعاية المريض','New Patient Care entry'),{body:detail,tag:'carelog'});}catch(e){}}
+  inNote(L('تسجيل جديد','New entry'),detail);
+  if(notifOn&&'Notification'in window&&Notification.permission==='granted'){try{new Notification(L('تسجيل جديد في رعاية المريض','New Patient Care entry'),{body:detail,tag:'carelog',icon:'/icon-192.png',badge:'/badge-96.png'});}catch(e){}}
 }
 
 document.addEventListener('DOMContentLoaded',init);
