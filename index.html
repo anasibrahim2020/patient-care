@@ -409,6 +409,8 @@ const ST={
 };
 let pendingImg=null;
 let supAddType='supply'; // 'med' | 'supply' — category for the add-item form
+let supFilter='all';     // 'all' | 'med' | 'supply' — supplies tab filter
+let supQuery='';         // supplies tab search text (lowercased)
 let notifOn=localStorage.getItem('notif')==='1';
 let mgr=false;
 const SID=Math.random().toString(36).slice(2)+Date.now().toString(36);
@@ -1344,24 +1346,57 @@ function rSupplies(){
   }else{
     html+=`<div class="warn-note" style="background:var(--accent-l);border-color:#cfe0f5;color:var(--accent-d)"><span class="wm" style="background:var(--accent)">i</span><span>${L('كل ما تخلص علبة اضغط «خلصت علبة» على البند — والنظام يحسب المستهلك والمتبقي تلقائيًا.','When a box finishes, press "Box finished" on the item — the system tracks used and remaining automatically.')}</span></div>`;
   }
+  // search + filter (available to everyone)
+  html+=`<div class="card" style="padding:12px 12px 14px">
+    <div class="fg" style="margin:0"><input id="supSearch" type="search" placeholder="${L('ابحث باسم الدواء أو المنتج…','Search by drug or product name…')}" value="${esc(supQuery)}" oninput="supQuery=this.value.trim().toLowerCase();filterSupplies()"></div>
+    <div class="seg" id="supFilterSeg" style="margin-top:10px">
+      <button type="button" class="seg-b ${supFilter==='all'?'on':''}" onclick="setSupFilter('all')">${L('الكل','All')}</button>
+      <button type="button" class="seg-b ${supFilter==='med'?'on':''}" onclick="setSupFilter('med')">${L('الأدوية','Medications')}</button>
+      <button type="button" class="seg-b ${supFilter==='supply'?'on':''}" onclick="setSupFilter('supply')">${L('المستهلكات','Supplies')}</button>
+    </div>
+  </div>`;
   const meds=list.filter(s=>s.type==='med');
   const sups=list.filter(s=>s.type!=='med');
-  html+=rSupGroup(L('الأدوية','Medications'),meds,'#0e7c74');
-  html+=rSupGroup(L('المستهلكات','Supplies'),sups,'#2f8f5b');
+  html+=rSupGroup(L('الأدوية','Medications'),meds,'#0e7c74','med');
+  html+=rSupGroup(L('المستهلكات','Supplies'),sups,'#2f8f5b','supply');
+  setTimeout(filterSupplies,0); // apply persisted filter/search after render
   return html;
 }
-function rSupGroup(title,items,color){
-  const low=items.filter(s=>s.rem<=2).length;
-  let h=`<div class="sec-lbl" style="--sl:${color}">${title} <span class="muted" style="font-weight:600">(${items.length})</span>${low?` — <span style="color:var(--late)">${low} ${L('قرب النفاد','running low')}</span>`:''}</div>`;
-  h+=items.length?items.map(rSupply).join(''):`<div class="empty">${L('لا توجد أصناف في هذا القسم','No items in this section')}</div>`;
-  return h;
+function rSupGroup(title,items,color,gtype){
+  return `<div class="sup-group" data-gtype="${gtype}">
+    <div class="sec-lbl" style="--sl:${color}">${title} <span class="muted sup-count" style="font-weight:600">(${items.length})</span><span class="sup-low" style="color:var(--late);display:none"></span></div>
+    ${items.map(rSupply).join('')}
+    <div class="empty sup-empty" style="display:none">${L('لا توجد نتائج مطابقة','No matching items')}</div>
+  </div>`;
 }
 function pickSupType(t){supAddType=t;document.querySelectorAll('#supTypeSeg .seg-b').forEach((b,i)=>b.classList.toggle('on',(t==='med')?i===0:i===1));}
+function setSupFilter(t){
+  supFilter=t;
+  document.querySelectorAll('#supFilterSeg .seg-b').forEach((b,i)=>b.classList.toggle('on',['all','med','supply'][i]===t));
+  filterSupplies();
+}
+function filterSupplies(){
+  const q=supQuery;
+  document.querySelectorAll('.sup-group').forEach(g=>{
+    const gt=g.getAttribute('data-gtype');
+    const allowed=(supFilter==='all'||supFilter===gt);
+    let vis=0,low=0;
+    g.querySelectorAll('.sup-card').forEach(c=>{
+      const show=allowed&&(!q||(c.getAttribute('data-sname')||'').indexOf(q)>-1);
+      c.style.display=show?'':'none';
+      if(show){vis++;if(c.getAttribute('data-slow')==='1')low++;}
+    });
+    g.style.display=allowed?'':'none';
+    const cnt=g.querySelector('.sup-count');if(cnt)cnt.textContent=`(${vis})`;
+    const lowEl=g.querySelector('.sup-low');if(lowEl){lowEl.style.display=low?'':'none';lowEl.textContent=low?` — ${low} ${L('قرب النفاد','running low')}`:'';}
+    const emp=g.querySelector('.sup-empty');if(emp)emp.style.display=(allowed&&vis===0)?'':'none';
+  });
+}
 function rSupply(s){
   const rem=s.rem,low=rem<=2,out=rem===0;
   const status=out?L('نفد المخزون','Out of stock'):low?L('قرب النفاد','Running low'):'';
   const col=out?'var(--late)':low?'var(--due)':'var(--mut)';
-  return `<div class="card" style="${out?'border-color:var(--late-l);background:var(--late-bg)':low?'border-color:var(--due-l);background:var(--due-bg)':''}">
+  return `<div class="card sup-card" data-sname="${esc((s.name||'').toLowerCase())}" data-stype="${s.type==='med'?'med':'supply'}" data-slow="${low?1:0}" style="${out?'border-color:var(--late-l);background:var(--late-bg)':low?'border-color:var(--due-l);background:var(--due-bg)':''}">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
       <div style="min-width:0;flex:1">
         <div style="font-weight:800;font-size:.95rem">${esc(s.name)}${status?` <span class="pill ${out?'p-late':'p-due'}" style="margin-inline-start:4px">${status}</span>`:''}</div>
