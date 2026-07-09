@@ -591,6 +591,8 @@ function slotStatus(s){
   if(n<=m+60)return 'due';
   return 'late';
 }
+// Label a schedule slot by what it actually contains: a real drug → "Medication", care-only (reposition/bath/glucose) → "Care"
+function slotLabel(s){return s.items.some(it=>it.cat!=='care')?L('أدوية','Medication'):L('رعاية','Care');}
 const STLABEL={upcoming:{ar:'قادم',en:'Upcoming'},due:{ar:'الآن',en:'Now'},late:{ar:'فائت',en:'Overdue'},done:{ar:'تم',en:'Done'}};
 
 // ============ SESSIONS ============
@@ -822,7 +824,7 @@ function buildTabs(){
 }
 
 // ============ LANGUAGE ============
-function toggleLang(){ST.lang=ST.lang==='ar'?'en':'ar';localStorage.setItem('lang',ST.lang);applyLang();buildTabs();render();}
+function toggleLang(){ST.lang=ST.lang==='ar'?'en':'ar';localStorage.setItem('lang',ST.lang);applyLang();buildTabs();render();if(notifOn)subscribePush();}
 function applyLang(){
   const ar=ST.lang==='ar';
   document.getElementById('root').lang=ST.lang;
@@ -946,7 +948,7 @@ function rNow(){
   html+=`<div class="card b" style="grid-column:1/-1">
     <div class="card-h"><h3>${L('نظرة عامة — ملخص اليوم','Overview — Today at a glance')}</h3></div>
     <div class="ov-grid">
-      ${ovTile(L('التغذية','Feeds'),dn+' / 6',foodMl+'/900 · '+waterMl+'/1000 ml',null,'teal')}
+      ${ovTile(L('التغذية','Feeds'),dn+' / 6',foodMl+'/900 · '+waterMl+'/1200 ml',null,'teal')}
       ${ovTile(L('الأدوية','Meds'),medDone+' / '+medTotal,overdue?L(overdue+' مواعيد فائتة',overdue+' overdue'):L('لا يوجد فائت','none overdue'),overdue?'late':'','blue')}
       ${ovTile(L('الوضعية الآن','Position'),lastPos?lastPos.pos:'—',lastPos?sinceStr(lastPos.at)+' · '+ft(lastPos.at):L('لم تُسجّل','not logged'),null,'violet')}
       ${ovTile(L('اللبوس / التبرّز','Supp / BM'),ST.suppLog.length?L('لبوس ✓','Supp ✓'):(bmHrs!=null?bmHrs+L('س','h'):'—'),bmHrs!=null?L('منذ آخر تبرّز','since last BM'):L('لا تبرّز مسجّل','no BM'),(bmHrs!=null&&bmHrs>=48)?'late':'','amber')}
@@ -1000,7 +1002,7 @@ function rNow(){
   }
   if(!anything){
     const up=[];
-    slots.forEach(s=>{if(!slotAllDone(s)&&hm2min(s.t)>=curMin())up.push({t:s.t,label:L('أدوية','Medication')});});
+    slots.forEach(s=>{if(!slotAllDone(s)&&hm2min(s.t)>=curMin())up.push({t:s.t,label:slotLabel(s)});});
     ST.sessions.forEach(s=>{if(!s.steps.every(Boolean)){const m=s.h*60+s.m;if(m>=curMin())up.push({t:s.t,label:L('تغذية — الجلسة '+s.n,'Feed — Session '+s.n)});}});
     up.sort((a,b)=>hm2min(a.t)-hm2min(b.t));
     html+=`<div class="act clear"><div class="act-title">${L('لا يوجد مطلوب الآن','Nothing due right now')}</div>
@@ -1012,7 +1014,7 @@ function rNow(){
   slots.forEach(s=>{
     if(slotAllDone(s)||slotStatus(s)!=='upcoming')return;
     const items=s.items.filter(it=>!itemDone(it.id)).map(it=>({title:itemTitle(it),sub:it.cat==='care'?(it.position?tx(it.position):''):[it.dose,it.route].filter(Boolean).join(' · ')}));
-    upcoming.push({key:'m'+s.t.replace(':',''),t:s.t,label:L('أدوية','Medications'),n:items.length,items});
+    upcoming.push({key:'m'+s.t.replace(':',''),t:s.t,label:slotLabel(s),n:items.length,items});
   });
   ST.sessions.forEach(s=>{
     if(s.steps.every(Boolean)||sessStatus(s)!=='upcoming')return;
@@ -1188,7 +1190,7 @@ function rFeed(){
     <div class="card">
     <div class="card-h"><h3>${L('تغذية اليوم',"Today's Feeding")}</h3><span class="small muted">${dn}/6 ${L('جلسات','sessions')}</span></div>
     <div class="prog"><div class="prog-h"><span>${L('تغذية','Food')}</span><span>${foodMl} / 900 ml</span></div><div class="bar"><div class="fill" style="width:${Math.min(100,foodMl/9)}%"></div></div></div>
-    <div class="prog"><div class="prog-h"><span>${L('ماء','Water')}</span><span>${waterMl} / 1000 ml</span></div><div class="bar"><div class="fill w" style="width:${Math.min(100,waterMl/10)}%"></div></div></div>
+    <div class="prog"><div class="prog-h"><span>${L('ماء','Water')}</span><span>${waterMl} / 1200 ml</span></div><div class="bar"><div class="fill w" style="width:${Math.min(100,waterMl/12)}%"></div></div></div>
   </div>
   <div class="warn-note"><span class="wm">!</span><span>${L('تحذير: يجب إجلاس المريض بزاوية <strong>40–45°</strong> طوال فترة التغذية ولمدة بعدها — للوقاية من الالتهاب الرئوي الشفطي.','Warning: seat the patient at <strong>40–45°</strong> throughout the feed and for a while after — to prevent aspiration pneumonia.')}</span></div>`;
   ST.sessions.forEach((s,xi)=>{
@@ -1196,19 +1198,22 @@ function rFeed(){
     const pill={done:'p-done',active:'p-due',late:'p-late',upcoming:'p-up'}[st];
     const lbl={done:{ar:'تم',en:'Done'},active:{ar:'جارية',en:'Active'},late:{ar:'فائتة',en:'Overdue'},upcoming:{ar:'قادمة',en:'Upcoming'}}[st];
     html+=`<div class="card ${st==='active'||st==='late'?'b':''}">
-      <div class="card-h"><h3>${L('الجلسة','Session')} ${s.n} <span class="muted small">· ${to12(s.t)}</span></h3><span class="pill ${pill}">${tx(lbl)} · ${cnt}/5</span></div>
+      <div class="card-h"><h3>${L('الجلسة','Session')} ${s.n} <span class="muted small">· ${L('أكل','Feed')} ${to12(s.t)} · ${L('ماء','Water')} ${to12(waterTime(s))}</span></h3><span class="pill ${pill}">${tx(lbl)} · ${cnt}/5</span></div>
       ${STEP_DEF.map((d,si)=>rStep(d,si,xi,s)).join('')}</div>`;
   });
   return html;
 }
+function waterMin(s){return (s.h*60+s.m+120)%1440;} // water is due ~2h after the feed starts
+function waterTime(s){const w=waterMin(s);return `${p2(Math.floor(w/60))}:${p2(w%60)}`;}
 function rStep(def,si,xi,s){
   const dn=s.steps[si],prev=si===0||s.steps[si-1];
   const cls='step'+(dn?' done':prev?'':' lock');
   const clickable=dn||prev;
   const oc=clickable?`onclick="tapStep(${xi},${si})" role="button" tabindex="0"`:'';
+  const etime=si===0?to12(s.t):(si===3?to12(waterTime(s)):''); // show the expected time on the feed & water steps
   return `<div class="${cls}" ${oc}>
     <div class="num">${dn?'✓':si+1}</div>
-    <div style="flex:1"><div class="s-t">${tx(def.t)}</div><div class="s-h">${tx(def.h)}</div>${s.times[si]?`<div class="s-d">${L('تم','done')} · ${ft(s.times[si])}</div>`:''}</div>
+    <div style="flex:1"><div class="s-t">${tx(def.t)}${etime?` <span class="muted small" style="font-weight:700">· ${etime}</span>`:''}</div><div class="s-h">${tx(def.h)}</div>${s.times[si]?`<div class="s-d">${L('تم','done')} · ${ft(s.times[si])}</div>`:''}</div>
   </div>`;
 }
 function tapStep(xi,si){
@@ -1694,7 +1699,7 @@ function rReports(){
   html+=`<div class="sec-lbl">${L('2 · التغذية خلال اليوم','2 · Feeding Intake')}</div>
     <div class="card">
       <div class="prog"><div class="prog-h"><span>${L('إجمالي التغذية','Total food')}</span><span dir="ltr">${foodMl} / 900 ml</span></div><div class="bar"><div class="fill" style="width:${Math.min(100,foodMl/9)}%"></div></div></div>
-      <div class="prog"><div class="prog-h"><span>${L('إجمالي الماء','Total water')}</span><span dir="ltr">${waterMl} / 1000 ml</span></div><div class="bar"><div class="fill w" style="width:${Math.min(100,waterMl/10)}%"></div></div></div>
+      <div class="prog"><div class="prog-h"><span>${L('إجمالي الماء','Total water')}</span><span dir="ltr">${waterMl} / 1200 ml</span></div><div class="bar"><div class="fill w" style="width:${Math.min(100,waterMl/12)}%"></div></div></div>
       <div style="margin-top:6px">${d.sessions.map((s,i)=>{const f=s.steps&&s.steps[0],w=s.steps&&s.steps[3];return `<div class="idrow"><span class="k">${L('الجلسة','Session')} ${i+1}</span><span class="v" dir="ltr" style="font-weight:600">${f?L('تغذية ✓','Feed ✓')+(s.times&&s.times[0]?' '+ft(s.times[0]):''):L('—','—')} · ${w?L('ماء ✓','Water ✓'):L('—','—')}</span></div>`;}).join('')}</div>
     </div>`;
 
@@ -1774,7 +1779,7 @@ async function subscribePush(){
     let sub=await reg.pushManager.getSubscription();
     if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64ToUint8(VAPID_PUBLIC)});
     const j=sub.toJSON();
-    await sb.from('push_subscriptions').upsert({endpoint:j.endpoint,p256dh:j.keys.p256dh,auth:j.keys.auth,email:currentUser.email,updated_at:new Date().toISOString()},{onConflict:'endpoint'}).then(()=>{},()=>{});
+    await sb.from('push_subscriptions').upsert({endpoint:j.endpoint,p256dh:j.keys.p256dh,auth:j.keys.auth,email:currentUser.email,lang:ST.lang,updated_at:new Date().toISOString()},{onConflict:'endpoint'}).then(()=>{},()=>{});
   }catch(e){}
 }
 function toggleNotif(){
@@ -1803,9 +1808,16 @@ function checkNotifs(){
   });
   ST.sessions.forEach(s=>{
     if(s.steps.every(Boolean))return;
-    const d=(s.h*60+s.m)-n;
-    if(d===15)fire(`f${s.n}15`,L('تذكير: تغذية بعد 15 دقيقة','Reminder: feed in 15 min'),`${L('الجلسة','Session')} ${s.n} — ${to12(s.t)}`);
-    if(d===0)fire(`f${s.n}0`,L('موعد التغذية الآن','Feeding time now'),`${L('الجلسة','Session')} ${s.n}`);
+    if(!s.steps[0]){ // feed not started yet → remind at the feed time
+      const d=(s.h*60+s.m)-n;
+      if(d===15)fire(`f${s.n}15`,L('تذكير: تغذية بعد 15 دقيقة','Reminder: feed in 15 min'),`${L('الجلسة','Session')} ${s.n} — ${to12(s.t)}`);
+      if(d===0)fire(`f${s.n}0`,L('موعد التغذية الآن','Feeding time now'),`${L('الجلسة','Session')} ${s.n}`);
+    }
+    if(!s.steps[3]){ // water not given yet → remind at the water time (feed + 2h)
+      const wd=waterMin(s)-n;
+      if(wd===15)fire(`w${s.n}15`,L('تذكير: ماء بعد 15 دقيقة','Reminder: water in 15 min'),`${L('الجلسة','Session')} ${s.n} — ${to12(waterTime(s))}`);
+      if(wd===0)fire(`w${s.n}0`,L('موعد الماء الآن','Water time now'),`${L('الجلسة','Session')} ${s.n} — 200 ml`);
+    }
   });
   // Vital-signs reminders (3×/day) — only nudge for a check that isn't done yet
   VITALS_TIMES.forEach((t,i)=>{
@@ -1982,7 +1994,7 @@ function printFeedSheet(){
     body+=`<tr><td><strong>${L('جلسة','Session')} ${s.n}</strong><br><span style="color:#657085;font-size:11px">${to12(s.t)}</span></td>${STEP_DEF.map(()=>`<td style="text-align:center"><span class="box"></span></td>`).join('')}</tr>`;
   });
   body+=`</tbody></table>
-    <p style="font-size:11px;color:#657085;margin-top:10px">${L('إجمالي اليوم: 6 جلسات · 900 مل تغذية · 1000 مل ماء','Daily total: 6 sessions · 900 ml feed · 1000 ml water')}</p>`;
+    <p style="font-size:11px;color:#657085;margin-top:10px">${L('إجمالي اليوم: 6 جلسات · 900 مل تغذية · 1200 مل ماء','Daily total: 6 sessions · 900 ml feed · 1200 ml water')}</p>`;
   const feedCss=`
     @page{size:A4 landscape;margin:1cm}
     th{padding:10px 11px;font-size:11.5px}
@@ -2018,7 +2030,7 @@ function printReportFor(date){
   <tbody>${vitals.map(v=>`<tr><td>${ft(v.at)}</td><td>${v.temp??'—'}</td><td>${(v.sys!=null||v.dia!=null)?(v.sys??'—')+'/'+(v.dia??'—'):'—'}</td><td>${v.pulse??'—'}</td><td>${v.rr??'—'}</td><td>${v.spo2??'—'}</td><td>${v.glucose??'—'}</td><td class="${v.urine==='abnormal'?'r':''}">${v.urine?({none:'None',normal:'Normal',abnormal:'Abnormal'}[v.urine])+(v.urineNote?` (${esc(v.urineNote)})`:''):'—'}</td><td class="${v.stool==='abnormal'?'r':''}">${v.stool?({none:'None',normal:'Normal',abnormal:'Abnormal'}[v.stool])+(v.stoolNote?` (${esc(v.stoolNote)})`:''):'—'}</td></tr>`).join('')}</tbody></table>`:'<p class="p">No vitals recorded.</p>'}
 
   <h2>2 · Feeding Intake</h2>
-  <div class="tot">Food: <span>${foodMl} / 900 ml</span> &nbsp; Water: <span>${waterMl} / 1000 ml</span></div>
+  <div class="tot">Food: <span>${foodMl} / 900 ml</span> &nbsp; Water: <span>${waterMl} / 1200 ml</span></div>
   <table><thead><tr><th>Session</th><th>Feed (150ml)</th><th>Water (200ml)</th></tr></thead>
   <tbody>${d.sessions.map((s,i)=>`<tr><td>Session ${i+1}</td><td class="${s.steps&&s.steps[0]?'g':'p'}">${s.steps&&s.steps[0]?'✓ '+(s.times&&s.times[0]?ft(s.times[0]):''):'—'}</td><td class="${s.steps&&s.steps[3]?'g':'p'}">${s.steps&&s.steps[3]?'✓ '+(s.times&&s.times[3]?ft(s.times[3]):''):'—'}</td></tr>`).join('')}</tbody></table>
 
