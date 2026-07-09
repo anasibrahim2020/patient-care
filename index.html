@@ -71,12 +71,6 @@ body::-webkit-scrollbar-thumb{background:#cfd4dc;border-radius:8px;border:3px so
 .acc.open .acc-chev{transform:rotate(180deg)}
 .acc .acc-body{display:none;margin-top:10px;border-top:1px solid var(--line2);padding-top:8px}
 .acc.open .acc-body{display:block}
-.med-photo{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:5px;align-self:flex-start}
-.med-thumb{width:48px;height:48px;border-radius:9px;object-fit:cover;border:1px solid var(--line);cursor:pointer;background:#eef1f5}
-.med-thumb-sm{width:30px;height:30px;border-radius:6px;object-fit:cover;vertical-align:middle;border:1px solid var(--line);cursor:pointer;margin-inline-start:6px}
-.med-cam{display:inline-flex;flex-direction:column;align-items:center;gap:2px;width:56px;padding:5px 4px;border:1px dashed var(--line);border-radius:9px;cursor:pointer;color:var(--mut);font-size:.6rem;font-weight:700;text-align:center;line-height:1.1;background:var(--pill)}
-.med-cam.add{color:var(--accent);border-color:#cfe0f5}
-.med-cam svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 
 /* Tabs */
 .tabs{background:var(--card);border-bottom:1px solid var(--line);display:flex;position:sticky;top:0;z-index:99;overflow-x:auto;scrollbar-width:none}
@@ -286,7 +280,7 @@ body.ar .card.b{box-shadow:var(--shadow),inset -3px 0 0 var(--accent)}
 .lb img{max-width:100%;max-height:100%;border-radius:8px}
 
 /* Toast */
-.toast{position:fixed;top:15px;inset-inline:15px;background:var(--ink);color:#fff;padding:13px 17px;border-radius:12px;font-size:.87rem;font-weight:700;z-index:400;text-align:center;pointer-events:none;transform:translateY(-24px);opacity:0;transition:all .28s;max-width:612px;margin:0 auto}
+.toast{position:fixed;top:calc(15px + env(safe-area-inset-top));inset-inline:15px;background:var(--ink);color:#fff;padding:13px 17px;border-radius:12px;font-size:.87rem;font-weight:700;z-index:400;text-align:center;pointer-events:none;transform:translateY(-24px);opacity:0;transition:all .28s;max-width:612px;margin:0 auto}
 .toast.vis{transform:translateY(0);opacity:1}
 .innote{position:fixed;top:calc(12px + env(safe-area-inset-top));inset-inline:12px;max-width:560px;margin:0 auto;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 34px rgba(16,24,40,.22);z-index:420;display:flex;align-items:center;gap:12px;padding:12px 14px;transform:translateY(-140%);opacity:0;transition:transform .32s cubic-bezier(.2,.8,.2,1),opacity .32s}
 .innote.vis{transform:translateY(0);opacity:1}
@@ -421,7 +415,7 @@ const SB_KEY='sb_publishable_dgsPW2h3JKxHhwIjLFztsQ_aArkU_Rj';
 const VAPID_PUBLIC='BP2dpWhhU-5ffvZWM0q-LAYuoqtknMvzeGmFyIzSJ7i-XyXWixxNumsLao3bjlT4FEHjtQhc_VMcACsJ2vjOnaI';
 
 // ============ STATE ============
-const TODAY=new Date().toISOString().split('T')[0];
+const TODAY=(function(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(); // LOCAL date (not UTC) so the day rolls over at local midnight
 let sb=null;
 const ST={
   lang:localStorage.getItem('lang')||'en',
@@ -803,7 +797,11 @@ async function init(){
     goTab('emerg');hideBoot();
   }
   if(notifOn&&'Notification'in window&&Notification.permission==='granted'){startNotifLoop();subscribePush();}
-  setInterval(()=>{if(ST.tab==='now')render();},60000);
+  setInterval(()=>{
+    const n=new Date(),d=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');
+    if(d!==TODAY){location.reload();return;} // a new day started while the app was open → reload to reset
+    if(ST.tab==='now')render();
+  },60000);
   if('serviceWorker'in navigator&&location.protocol.indexOf('http')===0){
     var hadController=!!navigator.serviceWorker.controller, swReloaded=false;
     navigator.serviceWorker.addEventListener('controllerchange',function(){
@@ -982,7 +980,7 @@ function rNow(){
     const hasMed=pend.some(it=>it.cat!=='care');
     const actTitle=hasMed?L('مطلوب الآن — أدوية','Due now — Medication'):L('مطلوب الآن — رعاية','Due now — Care');
     html+=`<div class="act ${st==='late'?'late':''}"><div class="act-top"><span class="act-title">${actTitle}</span><span class="pill ${st==='late'?'p-late':'p-due'}">${to12(s.t)} · ${tx(STLABEL[st])}</span></div>
-      <ul class="act-list">${pend.map(it=>{const ph=drugPhoto(it);return `<li>${itemTitle(it)}${it.cat==='care'&&it.position?` — <strong>${tx(it.position)}</strong>`:''}${it.route?` <span class="chip">${it.route}</span>`:''}${ph?` <img class="med-thumb-sm" src="${ph}" onclick="openLBUrl('${ph}')" alt="">`:''}</li>`;}).join('')}</ul>
+      <ul class="act-list">${pend.map(it=>`<li>${itemTitle(it)}${it.cat==='care'&&it.position?` — <strong>${tx(it.position)}</strong>`:''}${it.route?` <span class="chip">${it.route}</span>`:''}</li>`).join('')}</ul>
       ${inst.length?`<div style="margin-top:10px">${inst.map(i=>`<div class="mini-inst">• ${i}</div>`).join('')}</div>`:''}
       <div style="margin-top:11px"><button class="btn btn-p btn-sm" onclick="goTab('meds')">${L('فتح الأدوية','Open Meds')}</button></div></div>`;
   });
@@ -1132,12 +1130,6 @@ function rTask(it){
      <label class="cline"><input type="checkbox" id="fl_${it.id}"> ${L('تم الإرواء (Flush) بعد الدواء','Flush done after')}</label>
    </div>`:'';
   const doneNote=d?`<div class="donenote">${L('تم','Done')} · ${ft(d.at)}${d.crushed?' · '+L('طُحن','crushed'):''}${d.flushed?' · Flush ✓':''}</div>`:'';
-  // Box photo (medications only) — sourced from the matching Supplies item; tap to zoom
-  let photoCell='';
-  if(it.cat!=='care'){
-    const purl=drugPhoto(it);
-    if(purl)photoCell=`<img class="med-thumb" src="${purl}" onclick="openLBUrl('${purl}')" alt="">`;
-  }
   return `<div class="task ${d?'done':''}">
     <button class="chk" onclick="toggleTask('${it.id}')">${d?'✓':''}</button>
     <div class="t-main">
@@ -1146,7 +1138,6 @@ function rTask(it){
       ${badges.length?`<div class="t-badges">${badges.join('')}</div>`:''}
       ${confirm}${doneNote}
     </div>
-    ${photoCell?`<div class="med-photo">${photoCell}</div>`:''}
   </div>`;
 }
 async function toggleTask(id){
@@ -1501,7 +1492,6 @@ function rSupply(s){
   const col=showOut?'var(--late)':low?'var(--due)':'var(--mut)';
   return `<div class="card sup-card" data-sname="${esc((s.name||'').toLowerCase())}" data-stype="${s.type==='med'?'med':'supply'}" data-slow="${low?1:0}" style="${showOut?'border-color:var(--late-l);background:var(--late-bg)':low?'border-color:var(--due-l);background:var(--due-bg)':''}">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-      ${s.photo?`<img class="med-thumb" src="${s.photo}" onclick="openLBUrl('${s.photo}')" alt="" style="width:54px;height:54px;flex-shrink:0">`:''}
       <div style="min-width:0;flex:1">
         <div style="font-weight:800;font-size:.95rem">${esc(s.name)}${status?` <span class="pill ${showOut?'p-late':'p-due'}" style="margin-inline-start:4px">${status}</span>`:''}</div>
         <div class="small" style="margin-top:5px;color:${col};font-weight:700">${L('المتبقي','Remaining')}: ${rem} / ${s.stock||0}</div>
@@ -1516,7 +1506,6 @@ function rSupply(s){
       ${canEdit()?`<button class="btn btn-p btn-sm" style="flex:1;min-width:130px" ${out?'disabled':''} onclick="useBox('${s.id}')">${L('خلصت علبة','Box finished')}</button>`:''}
       ${canManage()?`<button class="btn btn-o btn-sm" onclick="restock('${s.id}')">${L('توريد +1','Restock +1')}</button>
       <button class="btn btn-o btn-sm" onclick="editStock('${s.id}')">${L('تعديل','Edit')}</button>
-      <label class="btn btn-o btn-sm" style="display:inline-flex;align-items:center;gap:5px;cursor:pointer"><svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><rect x="3" y="7" width="18" height="13" rx="2"/><circle cx="12" cy="13.5" r="3.4"/><path d="M8.5 7l1.3-2.3h4.4L15.5 7"/></svg>${s.photo?L('تغيير الصورة','Change photo'):L('صورة العلبة','Box photo')}<input type="file" accept="image/*" onchange="uploadSupPhoto('${s.id}',this)" style="display:none"></label>
       <button class="btn btn-o btn-sm" onclick="toggleSupType('${s.id}')">${s.type==='med'?L('↦ للمستهلكات','↦ to Supplies'):L('↦ للأدوية','↦ to Meds')}</button>
       <button class="btn btn-d btn-sm" onclick="delSupply('${s.id}')">${L('حذف','Delete')}</button>`:''}
     </div>
@@ -1611,50 +1600,7 @@ function pickImg(inp){
   r.readAsDataURL(f);
 }
 function clearImg(){pendingImg=null;document.getElementById('attachWrap').innerHTML='';}
-// ---- Box photos: uploaded on a Supplies item, shown wherever that drug appears ----
-function openLBUrl(u){if(!u)return;document.getElementById('lbImg').src=u;document.getElementById('lightbox').classList.add('op');}
 function normName(x){return (x||'').toLowerCase().replace(/[^a-z0-9]/g,'');}
-// Find a box photo for a schedule medication by matching its name to a stocked supply item.
-function drugPhoto(it){
-  if(!it||it.cat==='care')return '';
-  const targets=[it.med,it.com].filter(Boolean).map(normName).filter(t=>t.length>=4);
-  if(!targets.length)return '';
-  for(const s of ST.supplies){
-    if(!s.photo)continue;
-    const sn=normName(s.name);
-    if(sn.length<4)continue;
-    if(targets.some(t=>t.includes(sn)||sn.includes(t)))return s.photo;
-  }
-  return '';
-}
-async function uploadSupPhoto(id,inp){
-  if(!requireManager())return;
-  const f=inp.files&&inp.files[0];if(!f)return;
-  const s=ST.supplies.find(x=>x.id===id);if(!s)return;
-  if(!sb){toast(L('يتطلب اتصالاً بالسحابة','Cloud connection required'),'warn');return;}
-  toast(L('جارٍ رفع الصورة…','Uploading photo…'),'');
-  const r=new FileReader();
-  r.onload=e=>{
-    const img=new Image();
-    img.onload=()=>{
-      const max=1000;let w=img.width,h=img.height;
-      if(w>max||h>max){const sc=Math.min(max/w,max/h);w=Math.round(w*sc);h=Math.round(h*sc);}
-      const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);
-      c.toBlob(async blob=>{
-        if(!blob){toast(L('تعذّرت معالجة الصورة','Could not process image'),'err');return;}
-        try{
-          const path='sup-'+id+'.jpg';
-          const{error}=await sb.storage.from('med-photos').upload(path,blob,{upsert:true,contentType:'image/jpeg'});
-          if(error){toast(L('فشل الرفع: ','Upload failed: ')+error.message,'err');return;}
-          s.photo=sb.storage.from('med-photos').getPublicUrl(path).data.publicUrl+'?v='+Date.now();
-          saveSupplies();render();toast(L('تم حفظ الصورة','Photo saved'),'ok'); // s.photo syncs with supplies
-        }catch(err){toast(L('فشل رفع الصورة','Upload failed'),'err');}
-      },'image/jpeg',0.72);
-    };
-    img.src=e.target.result;
-  };
-  r.readAsDataURL(f);
-}
 function addNote(){
   if(!requireEditor())return;
   const txt=document.getElementById('noteTxt').value.trim();

@@ -1,5 +1,5 @@
 // Bump this on every deploy to invalidate the old cache.
-const CACHE_NAME = "patient-care-v5";
+const CACHE_NAME = "patient-care-v6";
 const APP_SHELL = ["/", "/index.html", "/manifest.json", "/icon.svg", "/icon-192.png", "/icon-512.png", "/badge-96.png"];
 
 self.addEventListener("install", event => {
