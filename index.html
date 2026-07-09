@@ -66,6 +66,11 @@ body::-webkit-scrollbar-thumb{background:#cfd4dc;border-radius:8px;border:3px so
 .seg{display:flex;gap:6px}
 .seg-b{flex:1;padding:9px 10px;border:1px solid var(--line);background:var(--pill);border-radius:9px;font-weight:700;font-size:.85rem;color:var(--ink);cursor:pointer;font-family:inherit;transition:background .15s,border-color .15s,color .15s}
 .seg-b.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.acc .acc-h{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;background:none;border:none;font-family:inherit;font-weight:800;font-size:.92rem;color:var(--ink);cursor:pointer;padding:2px;text-align:start}
+.acc .acc-chev{transition:transform .2s;color:var(--mut);font-size:.8rem}
+.acc.open .acc-chev{transform:rotate(180deg)}
+.acc .acc-body{display:none;margin-top:10px;border-top:1px solid var(--line2);padding-top:8px}
+.acc.open .acc-body{display:block}
 
 /* Tabs */
 .tabs{background:var(--card);border-bottom:1px solid var(--line);display:flex;position:sticky;top:0;z-index:99;overflow-x:auto;scrollbar-width:none}
@@ -326,8 +331,8 @@ body.ar .card.b{box-shadow:var(--shadow),inset -3px 0 0 var(--accent)}
     </div>
     <div class="hdr-btns">
       <button class="hava tip" id="authBtn" onclick="authTap()" style="display:none"></button>
-      <button class="hb hi tip" id="setBtn" onclick="openSet()" aria-label="Settings"><svg viewBox="0 0 24 24"><line x1="4" y1="8" x2="20" y2="8"/><line x1="4" y1="16" x2="20" y2="16"/><circle cx="9" cy="8" r="2.3"/><circle cx="15" cy="16" r="2.3"/></svg></button>
-      <button class="hb hi tip" id="langBtn" onclick="toggleLang()" aria-label="Language"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18z"/></svg></button>
+      <button class="hb hi tip" id="setBtn" onclick="openSet()" aria-label="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+      <button class="hb hi tip" id="langBtn" onclick="toggleLang()" aria-label="Language"><svg viewBox="0 0 24 24"><path d="M4 5h7M8 3v2c0 4-2 7-5 8"/><path d="M5 10c0 2.5 2.5 4.5 5 5"/><path d="M13 20l4-9 4 9M14.4 17h5.2"/></svg></button>
     </div>
   </div>
 </header>
@@ -343,8 +348,6 @@ body.ar .card.b{box-shadow:var(--shadow),inset -3px 0 0 var(--accent)}
     <button class="btn btn-p w" id="notifBtn" onclick="toggleNotif()" style="margin-bottom:14px">تفعيل الإشعارات</button>
     <div class="small muted" id="notifHint" style="margin-bottom:6px"></div>
     <div class="hr"></div>
-    <div class="fg"><label id="feedTimeLbl">موعد أول تغذية</label><input type="time" id="feedStart"></div>
-    <button class="btn btn-o w" onclick="saveFeedTime()" id="saveFeedBtn">حفظ موعد التغذية</button>
     <button class="btn btn-d w" onclick="resetToday()" id="resetBtn">مسح تسجيلات اليوم</button>
     <div class="hr" id="authSep" style="display:none"></div>
     <div class="small muted" id="whoami" style="display:none;margin-bottom:8px;text-align:center"></div>
@@ -396,6 +399,8 @@ const PATIENT={
 // ============ SUPABASE CONFIG ============
 const SB_URL='https://djynxtuobkysisgtpkek.supabase.co';
 const SB_KEY='sb_publishable_dgsPW2h3JKxHhwIjLFztsQ_aArkU_Rj';
+// Web Push (background notifications). Public key is safe to expose; private key lives only in the Supabase Edge Function.
+const VAPID_PUBLIC='BP2dpWhhU-5ffvZWM0q-LAYuoqtknMvzeGmFyIzSJ7i-XyXWixxNumsLao3bjlT4FEHjtQhc_VMcACsJ2vjOnaI';
 
 // ============ STATE ============
 const TODAY=new Date().toISOString().split('T')[0];
@@ -411,6 +416,7 @@ let pendingImg=null;
 let supAddType='supply'; // 'med' | 'supply' — category for the add-item form
 let supFilter='all';     // 'all' | 'med' | 'supply' — supplies tab filter
 let supQuery='';         // supplies tab search text (lowercased)
+const nowOpenSlots=new Set(); // expanded "Coming Up" slots on the Now tab (keyed by slot)
 let notifOn=localStorage.getItem('notif')==='1';
 let mgr=false;
 const SID=Math.random().toString(36).slice(2)+Date.now().toString(36);
@@ -551,6 +557,14 @@ function daysUntil(ds){return Math.ceil((new Date(ds)-new Date(TODAY))/86400000)
 function p2(n){return String(n).padStart(2,'0');}
 function to12(t){let[h,m]=t.split(':').map(Number);const ap=h<12?'AM':'PM';let hh=h%12;if(hh===0)hh=12;return `${hh}:${p2(m)} ${ap}`;}
 function ft(iso){if(!iso)return'—';const d=new Date(iso);let h=d.getHours();const ap=h<12?'AM':'PM';let hh=h%12;if(hh===0)hh=12;return `${hh}:${p2(d.getMinutes())} ${ap}`;}
+function sinceStr(iso){
+  if(!iso)return'';
+  const mins=Math.floor((new Date()-new Date(iso))/60000);
+  if(mins<1)return L('الآن','just now');
+  const h=Math.floor(mins/60),m=mins%60;
+  if(h<=0)return L('منذ '+m+' د','for '+m+'m');
+  return L('منذ '+h+' س'+(m?' و'+m+' د':''),'for '+h+'h'+(m?' '+m+'m':''));
+}
 function curMin(){const n=new Date();return n.getHours()*60+n.getMinutes();}
 function hm2min(t){const[h,m]=t.split(':').map(Number);return h*60+m;}
 function fmtDate(){return new Date().toLocaleDateString(ST.lang==='ar'?'ar':'en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});}
@@ -644,7 +658,7 @@ async function ensureAuth(){
         document.getElementById('authMod').classList.remove('op');
         restoreLang();
         if(!was)goTab('emerg');else render();
-        _syncReady=true;syncDown();subscribeRealtime();hideBoot();
+        _syncReady=true;syncDown();subscribeRealtime();hideBoot();if(notifOn)subscribePush();
       }else{
         render();openAuth();
       }
@@ -762,7 +776,7 @@ async function init(){
   }else{
     goTab('emerg');hideBoot();
   }
-  if(notifOn&&'Notification'in window&&Notification.permission==='granted')startNotifLoop();
+  if(notifOn&&'Notification'in window&&Notification.permission==='granted'){startNotifLoop();subscribePush();}
   setInterval(()=>{if(ST.tab==='now')render();},60000);
   if('serviceWorker'in navigator&&location.protocol.indexOf('http')===0){
     var hadController=!!navigator.serviceWorker.controller, swReloaded=false;
@@ -791,13 +805,11 @@ function applyLang(){
   document.body.classList.toggle('ar',ar);
   document.body.style.direction=ar?'rtl':'ltr';
   document.getElementById('langBtn').setAttribute('data-tip',ar?'English':'العربية');
-  document.getElementById('appTitle').textContent=L('رعاية المريض','Patient Care');
+  document.getElementById('appTitle').textContent=L('رعاية','Care');
   const _np=tx(PATIENT.name).split(' ').filter(Boolean);
   document.getElementById('appSub').textContent=_np.length>2?_np[0]+' '+_np[_np.length-1]:tx(PATIENT.name);
   document.getElementById('setBtn').setAttribute('data-tip',L('الإعدادات','Settings'));
   document.getElementById('setTtl').textContent=L('الإعدادات','Settings');
-  document.getElementById('feedTimeLbl').textContent=L('موعد أول تغذية','First feed time');
-  document.getElementById('saveFeedBtn').textContent=L('حفظ موعد التغذية','Save feed time');
   document.getElementById('resetBtn').textContent=L('مسح تسجيلات اليوم',"Clear today's records");
   document.getElementById('closeSetBtn').textContent=L('إغلاق','Close');
   updateNotifBtn();
@@ -904,7 +916,7 @@ function rNow(){
   let lastPos=null;
   slots.forEach(s=>s.items.forEach(it=>{if(it.position&&itemDone(it.id)){const at=itemDone(it.id).at;if(!lastPos||at>lastPos.at)lastPos={pos:tx(it.position),at};}}));
   const lastAct=ST.actionLog.length?ST.actionLog[ST.actionLog.length-1]:null;
-  const lowSup=ST.supplies.filter(s=>supRem(s)<=2).length;
+  const lowSup=ST.supplies.filter(s=>s.type!=='med'&&supRem(s)<=2).length;
   const lastBM=localStorage.getItem('last_bm');
   const bmHrs=lastBM?Math.floor((Date.now()-new Date(lastBM).getTime())/3600000):null;
   html+=`<div class="card b" style="grid-column:1/-1">
@@ -912,7 +924,7 @@ function rNow(){
     <div class="ov-grid">
       ${ovTile(L('التغذية','Feeds'),dn+' / 6',foodMl+'/900 · '+waterMl+'/1000 ml',null,'teal')}
       ${ovTile(L('الأدوية','Meds'),medDone+' / '+medTotal,overdue?L(overdue+' مواعيد فائتة',overdue+' overdue'):L('لا يوجد فائت','none overdue'),overdue?'late':'','blue')}
-      ${ovTile(L('الوضعية الآن','Position'),lastPos?lastPos.pos:'—',lastPos?ft(lastPos.at):L('لم تُسجّل','not logged'),null,'violet')}
+      ${ovTile(L('الوضعية الآن','Position'),lastPos?lastPos.pos:'—',lastPos?sinceStr(lastPos.at)+' · '+ft(lastPos.at):L('لم تُسجّل','not logged'),null,'violet')}
       ${ovTile(L('اللبوس / التبرّز','Supp / BM'),ST.suppLog.length?L('لبوس ✓','Supp ✓'):(bmHrs!=null?bmHrs+L('س','h'):'—'),bmHrs!=null?L('منذ آخر تبرّز','since last BM'):L('لا تبرّز مسجّل','no BM'),(bmHrs!=null&&bmHrs>=48)?'late':'','amber')}
     </div>
     <div style="border-top:1px solid var(--line2);margin-top:12px;padding-top:6px">
@@ -941,8 +953,10 @@ function rNow(){
     if(pend.some(it=>it.crush))inst.push(L('طحن الأقراص طحنًا ناعمًا جدًا قبل الإعطاء عبر NGT','Crush tablets very finely before giving via NGT'));
     if(pend.some(it=>it.fridge))inst.push(L('دواء Lansoprazole يُحفظ في الثلاجة','Lansoprazole must be kept refrigerated'));
     if(pend.some(it=>it.flush))inst.push(L('الإرواء (Flush) بعد كل دواء مع تأكيد تنفيذه','Flush after each med and confirm it'));
-    html+=`<div class="act ${st==='late'?'late':''}"><div class="act-top"><span class="act-title">${L('مطلوب الآن — أدوية','Due now — Medication')}</span><span class="pill ${st==='late'?'p-late':'p-due'}">${to12(s.t)} · ${tx(STLABEL[st])}</span></div>
-      <ul class="act-list">${pend.map(it=>`<li>${itemTitle(it)}${it.route?` <span class="chip">${it.route}</span>`:''}</li>`).join('')}</ul>
+    const hasMed=pend.some(it=>it.cat!=='care');
+    const actTitle=hasMed?L('مطلوب الآن — أدوية','Due now — Medication'):L('مطلوب الآن — رعاية','Due now — Care');
+    html+=`<div class="act ${st==='late'?'late':''}"><div class="act-top"><span class="act-title">${actTitle}</span><span class="pill ${st==='late'?'p-late':'p-due'}">${to12(s.t)} · ${tx(STLABEL[st])}</span></div>
+      <ul class="act-list">${pend.map(it=>`<li>${itemTitle(it)}${it.cat==='care'&&it.position?` — <strong>${tx(it.position)}</strong>`:''}${it.route?` <span class="chip">${it.route}</span>`:''}</li>`).join('')}</ul>
       ${inst.length?`<div style="margin-top:10px">${inst.map(i=>`<div class="mini-inst">• ${i}</div>`).join('')}</div>`:''}
       <div style="margin-top:11px"><button class="btn btn-p btn-sm" onclick="goTab('meds')">${L('فتح الأدوية','Open Meds')}</button></div></div>`;
   });
@@ -953,10 +967,10 @@ function rNow(){
       ${si===1?`<div class="mini-inst">• ${L('الإرواء (Flush) بعد التغذية إلزامي مع تأكيده','Flush after feed is mandatory — confirm it')}</div>`:''}</div>
       <div style="margin-top:11px"><button class="btn btn-p btn-sm" onclick="goTab('feed')">${L('فتح التغذية','Open Feeding')}</button></div></div>`;
   }
-  const vPending=VITALS_TIMES.filter(t=>{const st=vitalsSlotStatus(t);return st==='due'||st==='late';});
+  const vPending=VITALS_TIMES.map((t,i)=>({t,st:vitalsSlotStatus(i)})).filter(x=>x.st==='due'||x.st==='late');
   if(vPending.length){
-    anything=true;const vLate=vPending.some(t=>vitalsSlotStatus(t)==='late');
-    html+=`<div class="act" style="border-inline-start-color:#b03a8a"><div class="act-top"><span class="act-title">${L('قياس المؤشرات الحيوية','Check vital signs')}</span><span class="pill ${vLate?'p-late':'p-due'}">${vPending.map(to12).join(' · ')}</span></div>
+    anything=true;const vLate=vPending.some(x=>x.st==='late');
+    html+=`<div class="act" style="border-inline-start-color:#b03a8a"><div class="act-top"><span class="act-title">${L('قياس المؤشرات الحيوية','Check vital signs')}</span><span class="pill ${vLate?'p-late':'p-due'}">${vPending.map(x=>to12(x.t)).join(' · ')}</span></div>
       <div class="act-body">${L('سجّل: الحرارة والضغط والنبض والتنفس والأكسجين والسكر، والبول والبراز.','Record: temperature, BP, pulse, respiration, SpO₂, glucose, and urine & stool.')}</div>
       <div style="margin-top:11px"><button class="btn btn-p btn-sm" style="background:#b03a8a" onclick="goTab('vitals')">${L('فتح القياسات وتسجيلها','Open & record Vitals')}</button></div></div>`;
   }
@@ -971,16 +985,36 @@ function rNow(){
   html+=`</div>`;
 
   const upcoming=[];
-  slots.forEach(s=>{if(!slotAllDone(s)&&slotStatus(s)==='upcoming')upcoming.push({t:s.t,label:L('أدوية','Medication'),n:s.items.length});});
-  ST.sessions.forEach(s=>{if(!s.steps.every(Boolean)&&sessStatus(s)==='upcoming')upcoming.push({t:s.t,label:L('تغذية — الجلسة '+s.n,'Feed — Session '+s.n)});});
+  slots.forEach(s=>{
+    if(slotAllDone(s)||slotStatus(s)!=='upcoming')return;
+    const items=s.items.filter(it=>!itemDone(it.id)).map(it=>({title:itemTitle(it),sub:it.cat==='care'?(it.position?tx(it.position):''):[it.dose,it.route].filter(Boolean).join(' · ')}));
+    upcoming.push({key:'m'+s.t.replace(':',''),t:s.t,label:L('أدوية','Medications'),n:items.length,items});
+  });
+  ST.sessions.forEach(s=>{
+    if(s.steps.every(Boolean)||sessStatus(s)!=='upcoming')return;
+    const items=STEP_DEF.map((d,i)=>({d,i})).filter(x=>!s.steps[x.i]).map(x=>({title:tx(x.d.t),sub:tx(x.d.h)}));
+    upcoming.push({key:'f'+s.n,t:s.t,label:L('تغذية — الجلسة '+s.n,'Feed — Session '+s.n),n:items.length,items});
+  });
   upcoming.sort((a,b)=>hm2min(a.t)-hm2min(b.t));
   if(upcoming.length){
-    html+=`<div class="sec-lbl">${L('المواعيد التالية','Coming Up')}</div><div class="card">
-      ${upcoming.slice(0,5).map(u=>`<div class="coming"><span>${tx(u.label)}${u.n?` <span class="muted small">(${u.n})</span>`:''}</span><span class="c-t">${to12(u.t)}</span></div>`).join('')}</div>`;
+    html+=`<div class="sec-lbl">${L('المواعيد التالية','Coming Up')} <span class="muted small">(${upcoming.length})</span></div>
+      <div class="small muted" style="margin:-4px 2px 8px">${L('اضغط على أي موعد لعرض إجراءاته','Tap any time to see its actions')}</div>`;
+    upcoming.forEach(u=>{
+      const open=nowOpenSlots.has(u.key);
+      const body=u.items.length?u.items.map(it=>`<div class="coming"><span>${esc(it.title)}${it.sub?` <span class="muted small">— ${esc(it.sub)}</span>`:''}</span></div>`).join(''):`<div class="small muted">${L('لا تفاصيل','No details')}</div>`;
+      html+=`<div class="card acc${open?' open':''}" id="up_${u.key}" style="margin-bottom:8px;padding:12px 14px">
+        <button type="button" class="acc-h" onclick="toggleUpSlot('${u.key}')">
+          <span>${tx(u.label)} <span class="muted small">(${u.n})</span></span>
+          <span style="display:flex;align-items:center;gap:9px"><span class="c-t">${to12(u.t)}</span><span class="acc-chev">▾</span></span>
+        </button>
+        <div class="acc-body">${body}</div>
+      </div>`;
+    });
   }
 
   return html;
 }
+function toggleUpSlot(k){const c=document.getElementById('up_'+k);if(!c)return;const open=c.classList.toggle('open');if(open)nowOpenSlots.add(k);else nowOpenSlots.delete(k);}
 
 function ovTile(label,big,sub,flag,tone){
   const col=flag==='late'?'var(--late)':(tone?`var(--tone-${tone})`:'var(--ink)');
@@ -1120,6 +1154,12 @@ function rFeed(){
   const waterMl=ST.sessions.filter(s=>s.steps[3]).length*200;
   const dn=ST.sessions.filter(s=>s.steps.every(Boolean)).length;
   let html=`<div style="text-align:end;margin-bottom:10px"><button class="btn btn-o btn-sm" onclick="printFeedSheet()">${L('طباعة الجدول للتعليم اليدوي','Print schedule for manual ticking')}</button></div>
+  ${canEdit()?`<div class="sec-lbl">${L('موعد أول جلسة تغذية','First feeding session')}</div>
+    <div class="card" style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap">
+      <div class="fg" style="margin:0;flex:1;min-width:150px"><label>${L('موعد أول جلسة الصبح','First session (morning)')}</label><input type="time" id="feedStartF" value="${p2(ST.sh)}:${p2(ST.sm)}"></div>
+      <button class="btn btn-p btn-sm" style="min-width:130px;height:44px" onclick="saveFeedTime()">${L('حفظ وبناء الجدول','Save & build')}</button>
+    </div>
+    <div class="small muted" style="margin:-2px 2px 12px">${L('سجّلي موعد أول جلسة الصبح — والجدول والتنبيهات تُبنى تلقائيًا (كل جلسة بعد السابقة بـ4 ساعات).','Set the first morning session — the schedule and reminders build automatically (each session 4 hours after the previous).')}</div>`:''}
     <div class="card">
     <div class="card-h"><h3>${L('تغذية اليوم',"Today's Feeding")}</h3><span class="small muted">${dn}/6 ${L('جلسات','sessions')}</span></div>
     <div class="prog"><div class="prog-h"><span>${L('تغذية','Food')}</span><span>${foodMl} / 900 ml</span></div><div class="bar"><div class="fill" style="width:${Math.min(100,foodMl/9)}%"></div></div></div>
@@ -1250,10 +1290,19 @@ const VITAL_DEF=[
   {k:'glucose',ar:'سكر الدم',en:'Blood glucose',unit:'mmol/L',ph:'5.5',step:'0.1'},
 ];
 // Daily vital-signs routine — 3 times/day (morning 6, afternoon 2, night 10)
-const VITALS_TIMES=['06:00','14:00','22:00'];
-function vitalsNear(t,arr){arr=arr||ST.vitals||[];const m=hm2min(t);for(const v of arr){const d=new Date(v.at);const vm=d.getHours()*60+d.getMinutes();if(Math.abs(vm-m)<=120)return v.at;}return null;}
-function vitalsDoneCount(arr){return VITALS_TIMES.filter(t=>vitalsNear(t,arr)).length;}
-function vitalsSlotStatus(t){if(vitalsNear(t))return 'done';const m=hm2min(t),n=curMin();if(n<m-30)return 'upcoming';if(n<=m+90)return 'due';return 'late';}
+const VITALS_TIMES=['06:00','14:00','22:00']; // reminder times only — timing is flexible
+const VIT_ORD=[{ar:'القياس الأول',en:'1st reading'},{ar:'القياس الثاني',en:'2nd reading'},{ar:'القياس الثالث',en:'3rd reading'}];
+// 3 checks/day with FLEXIBLE timing: any reading counts toward the next open slot,
+// regardless of the exact clock time it was taken.
+function vitalsTakenCount(arr){arr=arr||ST.vitals||[];return arr.length;}
+function vitalsDoneCount(arr){return Math.min(VITALS_TIMES.length,vitalsTakenCount(arr));}
+function vitalsSlotStatus(i){
+  if(i<vitalsTakenCount())return 'done';           // already covered by a recorded reading
+  const m=hm2min(VITALS_TIMES[i]),n=curMin();
+  if(n<m-30)return 'upcoming';
+  if(n<=m+90)return 'due';
+  return 'late';
+}
 function vitalStr(v){
   const parts=[];
   if(v.temp!=null)parts.push(`${L('حرارة','Temp')} ${v.temp}°C`);
@@ -1274,7 +1323,7 @@ function excretaToggle(k){const sel=document.getElementById('vt_'+k),w=document.
 function rVitals(){
   const list=ST.vitals.slice().sort((a,b)=>b.at.localeCompare(a.at));
   const done=vitalsDoneCount();
-  const routine=VITALS_TIMES.map(t=>{const st=vitalsSlotStatus(t);const pill={done:'p-done',due:'p-due',late:'p-late',upcoming:'p-up'}[st];const lbl={done:{ar:'تم',en:'Done'},due:{ar:'الآن',en:'Now'},late:{ar:'فائت',en:'Overdue'},upcoming:{ar:'قادم',en:'Upcoming'}}[st];return `<div class="coming"><span>${to12(t)}</span><span class="pill ${pill}">${tx(lbl)}</span></div>`;}).join('');
+  const routine=VITALS_TIMES.map((t,i)=>{const st=vitalsSlotStatus(i);const pill={done:'p-done',due:'p-due',late:'p-late',upcoming:'p-up'}[st];const lbl={done:{ar:'تم',en:'Done'},due:{ar:'الآن',en:'Now'},late:{ar:'فائت',en:'Overdue'},upcoming:{ar:'قادم',en:'Upcoming'}}[st];return `<div class="coming"><span>${tx(VIT_ORD[i])} <span class="muted small">· ${L('تذكير','reminder')} ${to12(t)}</span></span><span class="pill ${pill}">${tx(lbl)}</span></div>`;}).join('');
   return `
     <div class="sec-lbl">${L('روتين اليوم',"Today's Routine")}</div>
     <div class="card b"><div class="card-h"><h3>${L('قياس المؤشرات الحيوية','Vital-signs checks')}</h3><span class="small muted">${done}/3</span></div>${routine}</div>
@@ -1393,18 +1442,20 @@ function filterSupplies(){
   });
 }
 function rSupply(s){
-  const rem=s.rem,low=rem<=2,out=rem===0;
-  const status=out?L('نفد المخزون','Out of stock'):low?L('قرب النفاد','Running low'):'';
-  const col=out?'var(--late)':low?'var(--due)':'var(--mut)';
-  return `<div class="card sup-card" data-sname="${esc((s.name||'').toLowerCase())}" data-stype="${s.type==='med'?'med':'supply'}" data-slow="${low?1:0}" style="${out?'border-color:var(--late-l);background:var(--late-bg)':low?'border-color:var(--due-l);background:var(--due-bg)':''}">
+  const rem=s.rem,isMed=s.type==='med',out=rem===0;
+  // Low-stock / out-of-stock ALERTS are for supplies only — meds (e.g. 1 pill/month) shouldn't trigger false alarms
+  const low=!isMed&&rem<=2&&rem>0, showOut=!isMed&&out;
+  const status=showOut?L('نفد المخزون','Out of stock'):low?L('قرب النفاد','Running low'):'';
+  const col=showOut?'var(--late)':low?'var(--due)':'var(--mut)';
+  return `<div class="card sup-card" data-sname="${esc((s.name||'').toLowerCase())}" data-stype="${s.type==='med'?'med':'supply'}" data-slow="${low?1:0}" style="${showOut?'border-color:var(--late-l);background:var(--late-bg)':low?'border-color:var(--due-l);background:var(--due-bg)':''}">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
       <div style="min-width:0;flex:1">
-        <div style="font-weight:800;font-size:.95rem">${esc(s.name)}${status?` <span class="pill ${out?'p-late':'p-due'}" style="margin-inline-start:4px">${status}</span>`:''}</div>
+        <div style="font-weight:800;font-size:.95rem">${esc(s.name)}${status?` <span class="pill ${showOut?'p-late':'p-due'}" style="margin-inline-start:4px">${status}</span>`:''}</div>
         <div class="small" style="margin-top:5px;color:${col};font-weight:700">${L('المتبقي','Remaining')}: ${rem} / ${s.stock||0}</div>
         <div class="small muted" style="margin-top:2px">${L('المستهلك','Used')}: ${s.used||0}</div>
       </div>
       <div style="flex-shrink:0;text-align:center;min-width:52px">
-        <div style="font-weight:800;font-size:1.8rem;color:${out?'var(--late)':low?'var(--due)':'var(--ink)'}">${rem}</div>
+        <div style="font-weight:800;font-size:1.8rem;color:${showOut?'var(--late)':low?'var(--due)':'var(--ink)'}">${rem}</div>
         <div class="small muted">${L('متبقٍ','left')}</div>
       </div>
     </div>
@@ -1637,7 +1688,6 @@ function rReports(){
 
 // ============ SETTINGS ============
 function openSet(){
-  document.getElementById('feedStart').value=`${p2(ST.sh)}:${p2(ST.sm)}`;
   updateNotifBtn();
   const so=document.getElementById('signOutBtn'),sep=document.getElementById('authSep'),who=document.getElementById('whoami');
   if(sb&&currentUser){
@@ -1650,7 +1700,16 @@ function openSet(){
   document.getElementById('setMod').classList.add('op');
 }
 function closeSet(){document.getElementById('setMod').classList.remove('op');}
-function saveFeedTime(){if(!requireEditor())return;const[h,m]=document.getElementById('feedStart').value.split(':').map(Number);ST.sh=h;ST.sm=m;localStorage.setItem('sh',h);localStorage.setItem('sm',m);ST.sessions=buildSessions();render();toast(L('تم تحديث موعد التغذية','Feed time updated'),'ok');}
+function saveFeedTime(){
+  if(!requireEditor())return;
+  const el=document.getElementById('feedStartF');
+  if(!el||!el.value){toast(L('اختاري موعد أول جلسة','Pick the first session time'),'warn');return;}
+  const[h,m]=el.value.split(':').map(Number);
+  if(isNaN(h)||isNaN(m)){toast(L('موعد غير صحيح','Invalid time'),'warn');return;}
+  ST.sh=h;ST.sm=m;localStorage.setItem('sh',h);localStorage.setItem('sm',m);
+  ST.sessions=buildSessions();render();
+  toast(L('تم بناء جدول التغذية من موعد أول جلسة','Schedule built from the first session'),'ok');
+}
 async function resetToday(){
   if(!requireEditor())return;
   if(!(await uiConfirm(L('مسح جميع تسجيلات اليوم (الأدوية والتغذية والسجل)؟ لا يمكن التراجع.',"Clear all of today's records? Cannot be undone."),{danger:true,ok:L('مسح','Clear')})))return;
@@ -1669,15 +1728,34 @@ function updateNotifBtn(){
   b.className='btn w '+(on?'btn-o':'btn-p');
   h.textContent=L('تنبيه قبل كل موعد بـ 15 دقيقة وعند حلوله (يعمل أثناء فتح التطبيق).','Alerts 15 minutes before each event and at its time (works while the app is open).');
 }
+// ---- Web Push subscription (background notifications, works when the app is closed) ----
+function urlB64ToUint8(b64){
+  const pad='='.repeat((4-b64.length%4)%4);
+  const s=(b64+pad).replace(/-/g,'+').replace(/_/g,'/');
+  const raw=atob(s);const out=new Uint8Array(raw.length);
+  for(let i=0;i<raw.length;i++)out[i]=raw.charCodeAt(i);
+  return out;
+}
+async function subscribePush(){
+  try{
+    if(!sb||!currentUser||!('serviceWorker'in navigator)||!('PushManager'in window))return;
+    if(Notification.permission!=='granted')return;
+    const reg=await navigator.serviceWorker.ready;
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64ToUint8(VAPID_PUBLIC)});
+    const j=sub.toJSON();
+    await sb.from('push_subscriptions').upsert({endpoint:j.endpoint,p256dh:j.keys.p256dh,auth:j.keys.auth,email:currentUser.email,updated_at:new Date().toISOString()},{onConflict:'endpoint'}).then(()=>{},()=>{});
+  }catch(e){}
+}
 function toggleNotif(){
   if(!('Notification'in window)){toast(L('الإشعارات غير مدعومة على هذا الجهاز','Notifications not supported'),'err');return;}
   if(Notification.permission==='granted'){
     notifOn=!notifOn;localStorage.setItem('notif',notifOn?'1':'0');
-    if(notifOn)startNotifLoop();updateNotifBtn();
+    if(notifOn){startNotifLoop();subscribePush();}updateNotifBtn();
     toast(notifOn?L('تم تفعيل الإشعارات','Notifications on'):L('تم إيقاف الإشعارات','Notifications off'),'ok');
   }else{
     Notification.requestPermission().then(pm=>{
-      if(pm==='granted'){notifOn=true;localStorage.setItem('notif','1');startNotifLoop();updateNotifBtn();toast(L('تم تفعيل الإشعارات','Notifications on'),'ok');}
+      if(pm==='granted'){notifOn=true;localStorage.setItem('notif','1');startNotifLoop();subscribePush();updateNotifBtn();toast(L('تم تفعيل الإشعارات','Notifications on'),'ok');}
       else toast(L('تم رفض إذن الإشعارات','Permission denied'),'err');
     });
   }
@@ -1698,6 +1776,13 @@ function checkNotifs(){
     const d=(s.h*60+s.m)-n;
     if(d===15)fire(`f${s.n}15`,L('تذكير: تغذية بعد 15 دقيقة','Reminder: feed in 15 min'),`${L('الجلسة','Session')} ${s.n} — ${to12(s.t)}`);
     if(d===0)fire(`f${s.n}0`,L('موعد التغذية الآن','Feeding time now'),`${L('الجلسة','Session')} ${s.n}`);
+  });
+  // Vital-signs reminders (3×/day) — only nudge for a check that isn't done yet
+  VITALS_TIMES.forEach((t,i)=>{
+    if(vitalsSlotStatus(i)==='done')return;
+    const d=hm2min(t)-n;
+    if(d===15)fire(`v${t}15`,L('تذكير: قياس المؤشرات بعد 15 دقيقة','Reminder: vitals in 15 min'),`${to12(t)}`);
+    if(d===0)fire(`v${t}0`,L('موعد قياس المؤشرات الآن','Vitals check due now'),`${to12(t)}`);
   });
   // Date-based reminders: notify 2 days before and on the day (once per day)
   reminderList().forEach(r=>{

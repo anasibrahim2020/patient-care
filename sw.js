@@ -1,5 +1,5 @@
 // Bump this on every deploy to invalidate the old cache.
-const CACHE_NAME = "patient-care-v3";
+const CACHE_NAME = "patient-care-v4";
 const APP_SHELL = ["/", "/index.html", "/manifest.json", "/icon.svg"];
 
 self.addEventListener("install", event => {
@@ -17,6 +17,32 @@ self.addEventListener("activate", event => {
 
 // Allow the page to tell a waiting SW to take over immediately.
 self.addEventListener("message", e => { if (e.data === "skipWaiting") self.skipWaiting(); });
+
+// ---- Web Push: show a notification even when the app is closed ----
+self.addEventListener("push", event => {
+  let d = { title: "رعاية المريض", body: "" };
+  try { d = event.data.json(); } catch (_) { if (event.data) d.body = event.data.text(); }
+  event.waitUntil(self.registration.showNotification(d.title || "رعاية المريض", {
+    body: d.body || "",
+    icon: "/icon.svg",
+    badge: "/icon.svg",
+    tag: d.tag || "care-reminder",
+    renotify: true,
+    dir: "auto",
+    data: { url: "/" }
+  }));
+});
+
+// Tapping a notification focuses the open app (or opens it).
+self.addEventListener("notificationclick", event => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(list => {
+      for (const c of list) { if ("focus" in c) return c.focus(); }
+      if (self.clients.openWindow) return self.clients.openWindow("/");
+    })
+  );
+});
 
 self.addEventListener("fetch", event => {
   const req = event.request;
