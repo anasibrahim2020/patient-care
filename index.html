@@ -971,9 +971,10 @@ function rNow(){
         return `<div class="coming"><span class="muted">${L('التبوّل / التبرّز','Urine / Stool')}</span><span style="font-weight:700;text-align:end">${p.join(' · ')}</span></div>`;
       })()}
       ${(function(){const lb=localStorage.getItem('last_bath');if(!lb)return '';
-        const days=Math.floor((Date.now()-new Date(lb).getTime())/86400000);
-        const ago=days>=1?(ST.lang==='ar'?('منذ '+days+' يوم'):(days+'d ago')):sinceStr(lb);
-        return `<div class="coming"><span class="muted">${L('آخر استحمام','Last bath')}</span><span style="font-weight:700;text-align:end">${new Date(lb).toLocaleDateString(ST.lang==='ar'?'ar':'en-GB',{day:'numeric',month:'long'})} <span class="muted small">· ${ago}</span></span></div>`;
+        const b=new Date(lb),t=new Date();
+        const days=Math.round((new Date(t.getFullYear(),t.getMonth(),t.getDate())-new Date(b.getFullYear(),b.getMonth(),b.getDate()))/86400000); // calendar-day difference
+        const ago=days<=0?L('اليوم','today'):days===1?L('أمس','yesterday'):(ST.lang==='ar'?(days===2?'منذ يومين':'منذ '+days+' أيام'):days+'d ago');
+        return `<div class="coming"><span class="muted">${L('آخر استحمام','Last bath')}</span><span style="font-weight:700;text-align:end">${b.toLocaleDateString(ST.lang==='ar'?'ar':'en-GB',{day:'numeric',month:'long'})} <span class="muted small">· ${ago}</span></span></div>`;
       })()}
       ${lowSup?`<div class="coming"><span class="muted">${L('مستهلكات قرب النفاد','Supplies running low')}</span><span style="font-weight:800;color:var(--late)">${lowSup}</span></div>`:''}
     </div>
