@@ -437,7 +437,7 @@ let appRole='viewer';
 const noted=new Set();
 // ---- Live shared state (real-time collaborative) ----
 const _lsSet=localStorage.setItem.bind(localStorage);
-const SYNC_RE=/^(meds_|supp_|sess_|notes$|supplies$|last_bm$|vitD_next$|sh$|sm$)/;
+const SYNC_RE=/^(meds_|supp_|sess_|notes$|supplies$|last_bm$|last_bath$|vitD_next$|sh$|sm$)/;
 let _applyingRemote=false,_syncReady=false;
 localStorage.setItem=function(k,v){_lsSet(k,v);if(_syncReady&&!_applyingRemote&&SYNC_RE.test(k))pushState(k,v);};
 function pushState(k,v){
@@ -475,7 +475,7 @@ const SCHED=[
     {id:'m0600_neb',cat:'neb',med:'Ipratropium + Sodium Chloride 0.9%',com:'Atrovent + Nebusal',dose:'250 mcg/2 ml + 3 ml',route:'Nebulizer',mix:true},
   ]},
   {t:'07:00',items:[
-    {id:'m0700_bath',cat:'care',act:{ar:'الاستحمام وتغيير الوضعية',en:'Bath & Reposition'},position:{ar:'على الظهر (Supine)',en:'Back (Supine)'}},
+    {id:'m0700_bath',cat:'care',act:{ar:'تغيير الوضعية',en:'Reposition'},position:{ar:'على الظهر (Supine)',en:'Back (Supine)'}},
   ]},
   {t:'08:00',items:[
     {id:'m0800_clopi',cat:'med',med:'Clopidogrel 75 mg',com:'Pido 75',dose:'1 Tablet',route:'NG Tube',crush:true,flush:true},
@@ -485,7 +485,6 @@ const SCHED=[
     {id:'m0800_keppra',cat:'med',med:'Levetiracetam',com:'Keppra Oral Solution',dose:'7.5 ml',route:'NG Tube',flush:true},
     {id:'m0800_tears',cat:'eye',med:'Artificial Tears',com:'Tears Naturale II',dose:'1 drop / eye',route:'Both Eyes'},
     {id:'m0800_chlor',cat:'mouth',med:'Chlorhexidine 0.2%',com:'Chlorhexidine Mouth Wash',dose:'oral care',route:'Oral'},
-    {id:'m0800_movi',cat:'med',med:'Polyethylene Glycol',com:'Movicol',dose:'1 Sachet (dissolve)',route:'NG Tube',flush:true},
     {id:'m0800_senna',cat:'med',med:'Senna',com:'Senna Extract',dose:'2 Tablets',route:'NG Tube',crush:true,flush:true},
     {id:'m0800_sime',cat:'med',med:'Simethicone',com:'Flat-Q Oral Drops',dose:'1 ml',route:'NG Tube',flush:true},
     {id:'m0800_neb',cat:'neb',med:'Ipratropium + Sodium Chloride',com:'Atrovent + Nebusal',route:'Nebulizer',mix:true},
@@ -510,7 +509,6 @@ const SCHED=[
     {id:'m2000_keppra',cat:'med',med:'Levetiracetam',com:'Keppra Oral Solution',dose:'7.5 ml',route:'NG Tube',flush:true},
     {id:'m2000_tears',cat:'eye',med:'Artificial Tears',com:'Tears Naturale II',dose:'1 drop / eye',route:'Both Eyes'},
     {id:'m2000_chlor',cat:'mouth',med:'Chlorhexidine 0.2%',com:'Chlorhexidine Mouth Wash',dose:'oral care',route:'Oral'},
-    {id:'m2000_movi',cat:'med',med:'Polyethylene Glycol',com:'Movicol',dose:'1 Sachet (dissolve)',route:'NG Tube',flush:true},
     {id:'m2000_sime',cat:'med',med:'Simethicone',com:'Flat-Q Oral Drops',dose:'1 ml',route:'NG Tube',flush:true},
     {id:'m2000_pos',cat:'care',act:{ar:'تغيير الوضعية',en:'Reposition'},position:{ar:'على الظهر (Supine)',en:'Back (Supine)'}},
     {id:'m2000_neb',cat:'neb',med:'Ipratropium + Sodium Chloride',com:'Atrovent + Nebusal',route:'Nebulizer',mix:true},
@@ -957,6 +955,19 @@ function rNow(){
       <div class="coming"><span class="muted">${L('قياس المؤشرات الحيوية','Vital-signs checks')}</span><span style="font-weight:800;${vitalsDoneCount()<3?'color:var(--due)':'color:var(--ok)'}">${vitalsDoneCount()}/3</span></div>
       <div class="coming"><span class="muted">${L('آخر إجراء','Last action')}</span><span style="font-weight:700;text-align:end">${lastAct?esc(lastAct.detail)+' · '+ft(lastAct.at):L('لا يوجد بعد','none yet')}</span></div>
       ${ST.vitals.length?`<div class="coming"><span class="muted">${L('آخر قياسات','Last vitals')}</span><span style="font-weight:700;text-align:end" dir="ltr">${vitalStr(ST.vitals[ST.vitals.length-1])} · ${ft(ST.vitals[ST.vitals.length-1].at)}</span></div>`:''}
+      ${(function(){
+        const lu=[...ST.vitals].reverse().find(v=>v.urine),ls=[...ST.vitals].reverse().find(v=>v.stool);
+        if(!lu&&!ls)return '';
+        const col=x=>x==='abnormal'?'var(--late)':x==='normal'?'var(--ok)':'var(--mut)',p=[];
+        if(lu)p.push(`${L('بول','Urine')}: <span style="color:${col(lu.urine)}">${excreta(lu.urine,'urine')}</span>${lu.urineNote?` <span class="muted">(${esc(lu.urineNote)})</span>`:''}`);
+        if(ls)p.push(`${L('براز','Stool')}: <span style="color:${col(ls.stool)}">${excreta(ls.stool,'stool')}</span>${ls.stoolNote?` <span class="muted">(${esc(ls.stoolNote)})</span>`:''}`);
+        return `<div class="coming"><span class="muted">${L('التبوّل / التبرّز','Urine / Stool')}</span><span style="font-weight:700;text-align:end">${p.join(' · ')}</span></div>`;
+      })()}
+      ${(function(){const lb=localStorage.getItem('last_bath');if(!lb)return '';
+        const days=Math.floor((Date.now()-new Date(lb).getTime())/86400000);
+        const ago=days>=1?(ST.lang==='ar'?('منذ '+days+' يوم'):(days+'d ago')):sinceStr(lb);
+        return `<div class="coming"><span class="muted">${L('آخر استحمام','Last bath')}</span><span style="font-weight:700;text-align:end">${new Date(lb).toLocaleDateString(ST.lang==='ar'?'ar':'en-GB',{day:'numeric',month:'long'})} <span class="muted small">· ${ago}</span></span></div>`;
+      })()}
       ${lowSup?`<div class="coming"><span class="muted">${L('مستهلكات قرب النفاد','Supplies running low')}</span><span style="font-weight:800;color:var(--late)">${lowSup}</span></div>`:''}
     </div>
   </div>`;
@@ -1107,13 +1118,22 @@ function rMeds(){
   html+=`<div class="sec-lbl">${L('عند اللزوم (PRN)','As Needed (PRN)')}</div>
   <div class="card">
     <div class="card-h"><h3>Bisacodyl 10 mg</h3><span class="pill p-up">PRN</span></div>
-    <div class="t-sub" style="margin-bottom:9px">${L('لبوس ملين — يُعطى فقط عند مرور 48 ساعة دون تبرّز. ليس يوميًا.','Suppository — only if no bowel movement for 48 hours. Not daily.')}</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-o btn-sm" onclick="logBM()">${L('تسجيل تبرّز','Log bowel movement')}</button>
-      <button class="btn btn-o btn-sm" onclick="giveSupp()">${L('تسجيل إعطاء اللبوس','Log suppository given')}</button>
-    </div>
-    ${lastBM?`<div class="small muted" style="margin-top:9px">${L('آخر تبرّز','Last BM')}: ${ft(lastBM)}</div>`:''}
+    <div class="t-sub" style="margin-bottom:9px">${L('لبوس ملين — يُعطى فقط عند مرور 48 ساعة دون تبرّز. ليس يوميًا. (التبرّز يُسجَّل من تبويب القياسات)','Suppository — only if no bowel movement for 48 hours. Not daily. (Bowel movements are recorded in the Vitals tab)')}</div>
+    <button class="btn btn-o btn-sm" onclick="giveSupp()">${L('تسجيل إعطاء اللبوس','Log suppository given')}</button>
+    ${lastBM?`<div class="small muted" style="margin-top:9px">${L('آخر تبرّز','Last BM')}: ${new Date(lastBM).toLocaleDateString(ST.lang==='ar'?'ar':'en-GB',{day:'numeric',month:'long'})} · ${ft(lastBM)}</div>`:''}
     ${ST.suppLog.map(sl=>`<div class="small" style="margin-top:6px;color:var(--late)">${L('أُعطي اللبوس','Suppository given')} ${ft(sl.at)}</div>`).join('')}
+  </div>
+  <div class="card">
+    <div class="card-h"><h3>Movicol (Polyethylene Glycol)</h3><span class="pill p-up">PRN</span></div>
+    <div class="t-sub" style="margin-bottom:9px">${L('كيس مُلين — يُعطى عند اللزوم (حسب الحالة)، ليس بموعد ثابت. يُذاب ويُعطى عبر الأنبوب مع الإرواء.','Laxative sachet — given as needed (per condition), not on a fixed schedule. Dissolve and give via the tube with a flush.')}</div>
+    <button class="btn btn-o btn-sm" onclick="givePrn('Movicol')">${L('تسجيل إعطاء Movicol','Log Movicol given')}</button>
+    ${ST.actionLog.filter(a=>a.detail&&a.detail.indexOf('Movicol')>-1).map(a=>`<div class="small" style="margin-top:6px;color:var(--late)">${L('أُعطي Movicol','Movicol given')} ${ft(a.at)}</div>`).join('')}
+  </div>
+  <div class="card">
+    <div class="card-h"><h3>${L('الاستحمام','Bath')}</h3><span class="pill p-up">${L('عند اللزوم','As needed')}</span></div>
+    <div class="t-sub" style="margin-bottom:9px">${L('ليس يوميًا — مرة أو مرتين أسبوعيًا حسب الحاجة. سجّلي كل مرة يستحم فيها.','Not daily — once or twice a week as needed. Log it each time the patient bathes.')}</div>
+    <button class="btn btn-o btn-sm" onclick="logBath()">${L('تسجيل استحمام','Log bath')}</button>
+    ${(function(){const lb=localStorage.getItem('last_bath');return lb?`<div class="small muted" style="margin-top:9px">${L('آخر استحمام','Last bath')}: ${new Date(lb).toLocaleDateString(ST.lang==='ar'?'ar':'en-GB',{day:'numeric',month:'long'})} · ${ft(lb)}</div>`:`<div class="small muted" style="margin-top:9px">${L('لا يوجد استحمام مسجّل بعد','No bath logged yet')}</div>`;})()}
   </div>`;
   return html;
 }
@@ -1173,7 +1193,13 @@ async function giveSupp(){
   if(sb)try{sb.from('suppository_log').insert({given_date:TODAY,given_at:e.at}).then(()=>{},()=>{});}catch(err){}
   render();toast(L('تم تسجيل اللبوس','Suppository logged'),'ok');
 }
-function logBM(){if(!requireEditor())return;localStorage.setItem('last_bm',new Date().toISOString());logAct('care',L('تسجيل تبرّز','Bowel movement logged'));render();toast(L('تم التسجيل','Logged'),'ok');}
+async function givePrn(name){
+  if(!requireEditor())return;
+  if(!(await uiConfirm(L('تسجيل إعطاء ','Log ')+name+L(' الآن؟',' now?'))))return;
+  logAct('med',name+L(' — عند اللزوم',' — PRN'));
+  render();toast(L('تم التسجيل','Logged'),'ok');
+}
+function logBath(){if(!requireEditor())return;localStorage.setItem('last_bath',new Date().toISOString());logAct('care',L('استحمّ المريض','Patient bathed'));render();toast(L('تم تسجيل الاستحمام','Bath logged'),'ok');}
 
 // ============ FEEDING TAB ============
 function rFeed(){
@@ -1389,6 +1415,7 @@ function saveVital(){
   });
   const uu=document.getElementById('vt_urine')?.value;if(uu){v.urine=uu;if(uu==='abnormal'){const c=(document.getElementById('vt_urine_c')?.value||'').trim();if(c)v.urineNote=c;}any=true;}
   const ss=document.getElementById('vt_stool')?.value;if(ss){v.stool=ss;if(ss==='abnormal'){const c=(document.getElementById('vt_stool_c')?.value||'').trim();if(c)v.stoolNote=c;}any=true;}
+  if(ss&&ss!=='none')localStorage.setItem('last_bm',v.at); // recording a bowel movement in Vitals updates "last BM" (drives the PRN suppository logic)
   if(!any){toast(L('أدخل قيمة واحدة على الأقل','Enter at least one value'),'warn');return;}
   ST.vitals.push(v);
   localStorage.setItem(`vitals_${TODAY}`,JSON.stringify(ST.vitals));
