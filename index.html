@@ -591,6 +591,13 @@ function slotStatus(s){
 }
 // Label a schedule slot by what it actually contains: a real drug → "Medication", care-only (reposition/bath/glucose) → "Care"
 function slotLabel(s){return s.items.some(it=>it.cat!=='care')?L('أدوية','Medication'):L('رعاية','Care');}
+// Full description of what a slot contains — used in reminders so care is never hidden behind meds
+function slotDesc(s){
+  const med=s.items.some(it=>it.cat!=='care'),care=s.items.some(it=>it.cat==='care');
+  if(med&&care)return L('أدوية + تغيير وضعية','Meds + reposition');
+  if(med)return L('أدوية','Medication');
+  return L('تغيير الوضعية','Reposition');
+}
 const STLABEL={upcoming:{ar:'قادم',en:'Upcoming'},due:{ar:'الآن',en:'Now'},late:{ar:'فائت',en:'Overdue'},done:{ar:'تم',en:'Done'}};
 
 // ============ SESSIONS ============
@@ -1806,7 +1813,7 @@ async function subscribePush(){
     let sub=await reg.pushManager.getSubscription();
     if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64ToUint8(VAPID_PUBLIC)});
     const j=sub.toJSON();
-    await sb.from('push_subscriptions').upsert({endpoint:j.endpoint,p256dh:j.keys.p256dh,auth:j.keys.auth,email:currentUser.email,lang:ST.lang,updated_at:new Date().toISOString()},{onConflict:'endpoint'}).then(()=>{},()=>{});
+    await sb.from('push_subscriptions').upsert({endpoint:j.endpoint,p256dh:j.keys.p256dh,auth:j.keys.auth,email:currentUser.email,lang:ST.lang,client_id:SID,updated_at:new Date().toISOString()},{onConflict:'endpoint'}).then(()=>{},()=>{});
   }catch(e){}
 }
 function toggleNotif(){
@@ -1829,9 +1836,9 @@ function checkNotifs(){
   const n=curMin();
   getSlots().forEach(s=>{
     if(slotAllDone(s))return;
-    const d=hm2min(s.t)-n;
-    if(d===15)fire(`m${s.t}15`,L('تذكير: أدوية بعد 15 دقيقة','Reminder: meds in 15 min'),`${to12(s.t)}`);
-    if(d===0)fire(`m${s.t}0`,L('موعد الأدوية الآن','Medication time now'),`${to12(s.t)}`);
+    const d=hm2min(s.t)-n,lbl=slotDesc(s); // describes meds and/or reposition due at this slot
+    if(d===15)fire(`m${s.t}15`,L(`تذكير: ${lbl} بعد 15 دقيقة`,`${lbl} reminder — in 15 min`),`${to12(s.t)}`);
+    if(d===0)fire(`m${s.t}0`,L(`موعد ${lbl} الآن`,`${lbl} due now`),`${to12(s.t)}`);
   });
   ST.sessions.forEach(s=>{
     if(s.steps.every(Boolean))return;
