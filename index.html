@@ -533,7 +533,7 @@ const SCHED=[
     {id:'m0000_neb',cat:'neb',med:'Sodium Chloride 0.9%',com:'Nebusal',dose:'3 ml',route:'Nebulizer'},
   ]},
   {t:'04:00',items:[
-    {id:'m0400_pos',cat:'care',act:{ar:'تغيير الوضعية',en:'Reposition'},position:{ar:'على الظهر (Supine)',en:'Back (Supine)'}},
+    {id:'m0400_pos',cat:'care',act:{ar:'تغيير الوضعية',en:'Reposition'},position:{ar:'على الظهر (Supine)',en:'Back (Supine)'},note:{ar:'وقت الفجر — على ظهره وارفعي الراس تجهيزًا لتغذية 4:30',en:'Fajr — onto the back, raise the head for the 4:30 feed'}},
   ]},
 ];
 
@@ -618,7 +618,7 @@ const STLABEL={upcoming:{ar:'قادم',en:'Upcoming'},due:{ar:'الآن',en:'Now
 // ============ SESSIONS ============
 function buildSessions(){
   // Fixed feeding times aligned with the medication clock (day starts at 12:00 AM)
-  const FEED_TIMES=['08:00','11:00','14:00','17:00','20:00','00:30'];
+  const FEED_TIMES=['08:30','12:30','16:30','20:30','00:30','04:30'];
   const mins=FEED_TIMES.map(t=>{const [h,m]=t.split(':').map(Number);return h*60+m;}).sort((a,b)=>a-b);
   return mins.map((tm,i)=>{
     const h=Math.floor(tm/60),m=tm%60;
@@ -1257,7 +1257,7 @@ function rFeed(){
   const dn=ST.sessions.filter(s=>s.steps.every(Boolean)).length;
   let html=`<div style="text-align:end;margin-bottom:10px"><button class="btn btn-o btn-sm" onclick="printFeedSheet()">${L('طباعة الجدول للتعليم اليدوي','Print schedule for manual ticking')}</button></div>
   <div class="sec-lbl">${L('مواعيد التغذية','Feeding times')}</div>
-    <div class="small muted" style="margin:-2px 2px 12px">${L('الجدول ثابت: 8ص · 11ص · 2م · 5م · 8م · 12:30ص. المية: فلش 50 مل قبل وبعد كل تغذية (بدل 200 مل ماء) — الإجمالي مع الأدوية تحت 1000 مل.','Fixed schedule: 8am · 11am · 2pm · 5pm · 8pm · 12:30am. Water: 50 ml flush before & after each feed (instead of 200 ml) — total with meds under 1000 ml.')}</div>
+    <div class="small muted" style="margin:-2px 2px 12px">${L('الجدول ثابت كل 4 ساعات: 12:30ص · 4:30ص · 8:30ص · 12:30م · 4:30م · 8:30م. المية: فلش 50 مل قبل وبعد كل تغذية (بدل 200 مل ماء) — الإجمالي مع الأدوية تحت 1000 مل.','Fixed every 4 hours: 12:30am · 4:30am · 8:30am · 12:30pm · 4:30pm · 8:30pm. Water: 50 ml flush before & after each feed (instead of 200 ml) — total with meds under 1000 ml.')}</div>
     <div class="card">
     <div class="card-h"><h3>${L('تغذية اليوم',"Today's Feeding")}</h3><span class="small muted">${dn}/6 ${L('جلسات','sessions')}</span></div>
     <div class="prog"><div class="prog-h"><span>${L('تغذية','Food')}</span><span>${foodMl} / 900 ml</span></div><div class="bar"><div class="fill" style="width:${Math.min(100,foodMl/9)}%"></div></div></div>
@@ -1268,9 +1268,11 @@ function rFeed(){
     const st=sessStatus(s),cnt=s.steps.filter(Boolean).length;
     const pill={done:'p-done',active:'p-due',late:'p-late',upcoming:'p-up'}[st];
     const lbl={done:{ar:'تم',en:'Done'},active:{ar:'جارية',en:'Active'},late:{ar:'فائتة',en:'Overdue'},upcoming:{ar:'قادمة',en:'Upcoming'}}[st];
+    const splitNote=(s.t==='04:30')?`<div class="note-info" style="margin:2px 0 10px;color:var(--accent-d)">${L('أكلة الفجر مقسومة: <strong>ماما</strong> تبدأها (فلش + تبدأ الـ150 مل) وترجع تنام، و<strong>النيرس</strong> تعمل الفلش الأخير ~5:30ص. راس السرير يفضل مرفوع طول الوقت.','Fajr feed is split: <strong>Mama</strong> starts it (flush + start the 150 ml) and goes back to sleep, and the <strong>Nurse</strong> does the final flush ~5:30am. Keep the head raised throughout.')}</div>`:'';
+    const headChip=(s.t==='04:30')?`${personChip(s.t)} <span style="display:inline-block;font-size:10.5px;font-weight:700;padding:1px 8px;border-radius:20px;background:#e3f4f2;color:#0f766e;white-space:nowrap">👤 ${L('النيرس (Nurse)','Nurse')}</span>`:personChip(s.t);
     html+=`<div class="card ${st==='active'||st==='late'?'b':''}">
-      <div class="card-h"><h3>${L('الجلسة','Session')} ${s.n} <span class="muted small">· ${L('أكل','Feed')} ${to12(s.t)}</span> ${personChip(s.t)}</h3><span class="pill ${pill}">${tx(lbl)} · ${cnt}/3</span></div>
-      ${STEP_DEF.map((d,si)=>rStep(d,si,xi,s)).join('')}</div>`;
+      <div class="card-h"><h3>${L('الجلسة','Session')} ${s.n} <span class="muted small">· ${L('أكل','Feed')} ${to12(s.t)}</span> ${headChip}</h3><span class="pill ${pill}">${tx(lbl)} · ${cnt}/3</span></div>
+      ${splitNote}${STEP_DEF.map((d,si)=>rStep(d,si,xi,s)).join('')}</div>`;
   });
   return html;
 }
@@ -1279,10 +1281,14 @@ function rStep(def,si,xi,s){
   const cls='step'+(dn?' done':prev?'':' lock');
   const clickable=(dn||prev)&&canEditTask(s.t);
   const oc=clickable?`onclick="tapStep(${xi},${si})" role="button" tabindex="0"`:'';
-  const etime=si===1?to12(s.t):''; // show the expected time on the feed step
+  // Fajr feed (04:30) is split: Mama starts it (flush + feed) then sleeps; the Nurse does the final flush at 05:30.
+  const splitFajr=(s.t==='04:30');
+  let etime=si===1?to12(s.t):''; // show the expected time on the feed step
+  if(splitFajr&&si===2)etime=to12('05:30');
+  const nurseChip=(splitFajr&&si===2)?` <span style="display:inline-block;font-size:10.5px;font-weight:700;padding:1px 8px;border-radius:20px;background:#e3f4f2;color:#0f766e;white-space:nowrap">👤 ${L('النيرس (Nurse)','Nurse')}</span>`:'';
   return `<div class="${cls}" ${oc}>
     <div class="num">${dn?'✓':si+1}</div>
-    <div style="flex:1"><div class="s-t">${tx(def.t)}${etime?` <span class="muted small" style="font-weight:700">· ${etime}</span>`:''}</div><div class="s-h">${tx(def.h)}</div>${s.times[si]?`<div class="s-d">${L('تم','done')} · ${ft(s.times[si])}</div>`:''}</div>
+    <div style="flex:1"><div class="s-t">${tx(def.t)}${etime?` <span class="muted small" style="font-weight:700">· ${etime}</span>`:''}${nurseChip}</div><div class="s-h">${tx(def.h)}</div>${s.times[si]?`<div class="s-d">${L('تم','done')} · ${ft(s.times[si])}</div>`:''}</div>
   </div>`;
 }
 function tapStep(xi,si){
@@ -1331,9 +1337,9 @@ function rInstr(){
     <div class="sec-lbl">${L('الروتين اليومي والورديات','Daily Routine & Shifts')}</div>
     <div class="card">
       <div class="note-info" style="line-height:1.95">
-        <div><strong>${L('وردية النهار — النيرس (Nurse)','Day shift — Nurse')}:</strong> ${L('من 6ص لـ10:30م. تعمل التغذيات والأدوية والبخّار والتقليب. راحة ساعتين ظهرًا (3–5م).','6am–10:30pm. Handles feeds, meds, neb & repositioning. 2-hour midday rest (3–5pm).')}</div>
-        <div style="margin-top:6px"><strong>${L('راحة النيرس (Nurse) بالليل','Nurse night rest')}:</strong> ${L('8 ساعات متواصلة (10:30م → 6ص). قبل النوم تقلّب المريض على جنبه.','8 continuous hours (10:30pm → 6am). Turns the patient onto their side before sleeping.')}</div>
-        <div style="margin-top:6px"><strong>${L('وردية الليل — ماما (Wife)','Night shift — Wife')}:</strong> ${L('تغطّي تغذية 12:30ص، وآخر مهمة لها الفلش 1:30ص ثم النوم، وتقلّب المريض على ظهره وقت الفجر (~4:15ص).','Covers the 12:30am feed; last task is the 1:30am flush then sleep; turns the patient onto their back at Fajr (~4:15am).')}</div>
+        <div><strong>${L('وردية النهار — النيرس (Nurse)','Day shift — Nurse')}:</strong> ${L('من 5:30ص لـ10م. تعمل التغذيات والأدوية والبخّار والتقليب. راحة ساعتين ظهرًا (3–5م).','5:30am–10pm. Handles feeds, meds, neb & repositioning. 2-hour midday rest (3–5pm).')}</div>
+        <div style="margin-top:6px"><strong>${L('راحة النيرس (Nurse) بالليل','Nurse night rest')}:</strong> ${L('~7 ساعات ونص متواصلة (10م → 5:30ص). تصحى 5:30ص تعمل الفلش الأخير لأكلة الفجر. قبل النوم تقلّب المريض على جنبه.','~7.5 continuous hours (10pm → 5:30am). Wakes at 5:30am to do the final flush of the Fajr feed. Turns the patient onto their side before sleeping.')}</div>
+        <div style="margin-top:6px"><strong>${L('وردية الليل — ماما (Wife)','Night shift — Wife')}:</strong> ${L('تغطّي تغذية 12:30ص كاملة (وهو على جنبه مع رفع الراس — بعد الفلش تنزّل الراس بس بدون تقليب وتنام)، وتقليبة الفجر 4:00ص على ظهره، ثم تبدأ أكلة الفجر 4:30ص (فلش + تبدأ الـ150 مل) وترجع تنام — والنيرس تعمل الفلش الأخير 5:30ص.','Covers the full 12:30am feed (on his side, head raised — after the flush she just lowers the head, no turn, and sleeps), the 4:00am Fajr turn onto his back, then starts the 4:30am feed (flush + start the 150 ml) and goes back to sleep — the Nurse does the final flush at 5:30am.')}</div>
       </div>
       <div class="note-info" style="margin-top:8px">${L('مواعيد التغذية: 8ص · 11ص · 2م · 5م · 8م · 12:30ص. مواعيد الأدوية: 7:30 · 8ص · 1م · 8م. التفاصيل الكاملة في تبويبَي التغذية والأدوية.','Feed times: 8am · 11am · 2pm · 5pm · 8pm · 12:30am. Med times: 7:30 · 8am · 1pm · 8pm. Full details in the Feeding and Meds tabs.')}</div>
     </div>
