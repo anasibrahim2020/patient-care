@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>جدول الرعاية المُقسَّم</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background:#F1F5F9; font-family:'Cairo',system-ui,-apple-system,sans-serif; color:#111827; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .wrap { max-width:560px; margin:0 auto; }
+
+  /* Header */
+  .head { background:linear-gradient(160deg,#1D3A7A,#2A52A5); color:#fff; padding:20px 16px 24px; }
+  .head h1 { text-align:center; font-size:20px; font-weight:800; margin-bottom:2px; }
+  .head p { text-align:center; font-size:12px; color:#BFCFEE; }
+  .tiles { display:flex; gap:7px; margin-top:16px; justify-content:center; flex-wrap:wrap; }
+  .tile { border-radius:12px; padding:9px 12px; text-align:center; min-width:96px; }
+  .tile .t { font-size:11px; color:#DCE6F7; }
+  .tile .v { font-size:21px; font-weight:800; margin:3px 0; }
+  .tile .v span { font-size:11px; font-weight:400; }
+  .tile .s { font-size:9px; color:#BFCFEE; }
+  .tile .x { font-size:9px; color:#A7F3D0; margin-top:2px; }
+
+  .body { padding:14px 12px 40px; }
+
+  /* Workload summary */
+  .load { background:#fff; border:1px solid #E2E8F0; border-radius:16px; padding:16px 16px 14px; margin-bottom:16px; box-shadow:0 2px 10px rgba(15,23,42,.05); }
+  .load h3 { font-size:15px; font-weight:800; color:#1D3A7A; margin-bottom:12px; text-align:center; }
+  .load .statcards { display:flex; gap:8px; margin-bottom:16px; }
+  .load .sc { flex:1; min-width:0; background:#fff; border:1px solid #E2E8F0; border-top-width:4px; border-radius:11px; padding:11px 5px 10px; text-align:center; }
+  .load .sc .v { font-size:17px; font-weight:800; line-height:1.15; white-space:nowrap; }
+  .load .sc .l { font-size:10px; color:#64748B; font-weight:700; margin-top:5px; line-height:1.3; }
+  .load .barlabel { font-size:12px; font-weight:700; color:#475569; margin-bottom:8px; line-height:1.55; }
+  .load .tlbar { display:flex; direction:ltr; height:36px; border-radius:9px; overflow:hidden; margin-bottom:5px; border:1px solid #E2E8F0; }
+  .load .tlbar div { height:100%; }
+  .load .ticks { display:flex; direction:ltr; justify-content:space-between; font-size:10px; color:#94A3B8; font-weight:700; margin-bottom:16px; padding:0 1px; }
+  .load .rows { display:flex; flex-direction:column; gap:9px; }
+  .load .rows > div { display:flex; align-items:center; font-size:12.5px; color:#475569; }
+  .load .rows b { margin-left:auto; font-size:13px; font-weight:800; color:#0F172A; }
+  .load .rows .tot { border-top:1px solid #E2E8F0; padding-top:9px; font-weight:700; color:#1D3A7A; }
+  .load .sw { width:13px; height:13px; border-radius:4px; margin-right:9px; flex-shrink:0; }
+  .load .foot { font-size:12.5px; color:#334155; margin-top:14px; text-align:center; line-height:1.75; background:#ECFDF5; border:1px solid #A7F3D0; border-radius:10px; padding:11px 12px; }
+  .load .foot strong { color:#059669; }
+
+  /* Filter */
+  .filter { display:flex; gap:8px; margin-bottom:16px; justify-content:center; }
+  .filter button { padding:8px 20px; border-radius:99px; border:none; cursor:pointer; font-size:13px; font-weight:700; font-family:inherit; background:#E2E8F0; color:#475569; transition:.15s; }
+  .filter button.on-all { background:#1D3A7A; color:#fff; }
+  .filter button.on-care { background:#1D4ED8; color:#fff; }
+  .filter button.on-mom { background:#7C3AED; color:#fff; }
+
+  /* Timeline */
+  .tl { position:relative; }
+  .tl:before { content:""; position:absolute; inset-inline-start:86px; top:6px; bottom:6px; width:2px; background:#E2E8F0; }
+  .row { display:flex; align-items:flex-start; margin-bottom:7px; position:relative; }
+  .time { width:78px; flex-shrink:0; text-align:end; padding-inline-end:9px; padding-top:9px; }
+  .time b { font-size:13px; font-weight:700; color:#1E293B; }
+  .dot { width:14px; height:14px; border-radius:50%; border:2px solid #fff; flex-shrink:0; margin-top:11px; z-index:1; }
+  .card { flex:1; margin-inline-start:11px; border-radius:11px; padding:9px 12px; }
+  .card .top { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+  .task { font-size:13px; font-weight:600; line-height:1.45; flex:1; }
+  .min { flex-shrink:0; color:#fff; font-size:11px; font-weight:800; padding:2px 9px; border-radius:99px; }
+  .meta { display:flex; gap:6px; margin-top:5px; align-items:center; flex-wrap:wrap; }
+  .who { font-size:10px; font-weight:800; }
+  .eff { font-size:10px; font-weight:700; padding:2px 8px; border-radius:99px; }
+
+  /* Marker rows */
+  .mk { display:flex; align-items:center; margin:8px 0; }
+  .mk .time { padding-top:0; }
+  .mk .mdot { width:14px; height:14px; border-radius:50%; border:2px solid #fff; flex-shrink:0; z-index:1; }
+  .mk .mcard { flex:1; margin-inline-start:11px; border-radius:10px; padding:11px 14px; font-size:13px; font-weight:800; }
+
+  /* Note */
+  .note { margin-top:20px; background:#FFFBEB; border:1px solid #FCD34D; border-radius:14px; padding:16px 16px; }
+  .note h3 { font-size:14px; font-weight:800; color:#92400E; margin-bottom:8px; }
+  .note p { font-size:12.5px; color:#78350F; line-height:1.85; margin-bottom:8px; }
+  .note .ar { direction:rtl; text-align:right; border-top:1px dashed #FCD34D; padding-top:10px; margin-top:4px; }
+  .note .ar p { margin-bottom:6px; }
+  .soon { margin-top:12px; background:#ECFDF5; border:1px solid #A7F3D0; border-radius:10px; padding:11px 13px; font-size:12.5px; color:#065F46; line-height:1.7; font-weight:600; }
+  .soon strong { color:#047857; }
+  .info { margin-top:10px; background:#EFF6FF; border:1px solid #BFDBFE; border-radius:10px; padding:11px 13px; font-size:12.5px; color:#1E3A8A; line-height:1.7; font-weight:600; }
+  .info strong { color:#1D4ED8; }
+  .legend { display:flex; gap:14px; justify-content:center; margin-top:14px; font-size:11px; color:#64748B; flex-wrap:wrap; }
+  .legend span { display:inline-flex; align-items:center; gap:5px; }
+  .lg { width:11px; height:11px; border-radius:50%; }
+
+  /* ===== Print (A4) ===== */
+  @media print {
+    @page { size: A4 portrait; margin: 10mm; }
+    html, body { background:#fff !important; }
+    * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+    .wrap { max-width:100% !important; }
+    .filter { display:none !important; }
+    .head { border-radius:0; padding-top:10px; break-inside:avoid; page-break-inside:avoid; }
+    .body { padding:0; }
+    /* Page 1 = header + workload summary + caregiver note; balanced to fill the page nicely */
+    .pg1 { min-height:210mm; display:flex; flex-direction:column; justify-content:space-evenly; break-inside:avoid; page-break-inside:avoid; page-break-after:always; break-after:page; }
+    .load, .note { break-inside:avoid; margin:0; }
+    .load { padding:18px 18px 16px; }
+    .load h3 { font-size:16px; margin-bottom:15px; }
+    .load .statcards { margin-bottom:18px; }
+    .load .sc .v { font-size:19px; }
+    .load .sc .l { font-size:11px; }
+    .load .tlbar { height:46px; margin-bottom:6px; }
+    .load .barlabel { font-size:12.5px; margin-bottom:10px; }
+    .load .foot { margin-top:15px; padding:12px 14px; }
+    .soon, .info { font-size:12.5px; padding:12px 14px; }
+    .note { padding:18px; }
+    .note h3 { font-size:15px; margin-bottom:10px; }
+    .note p { font-size:13px; }
+    /* Page 2 onwards = the schedule */
+    .tl { padding-top:1mm; }
+    .row, .mk, .card, .mcard, .load .tlbar, .load .statcards { break-inside:avoid; page-break-inside:avoid; }
+    .tl:before { top:0; bottom:0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <h1>جدول الرعاية المُقسَّم</h1>
+    <p>نظام تجريبي &middot; تغذية بالجاذبية (Gravity Bag)</p>
+    <div class="tiles">
+      <div class="tile" style="background:rgba(37,99,235,.32)">
+        <div class="t">مقدمة الرعاية</div><div class="v">15 <span>مهمة</span></div>
+        <div class="s">5:00 ص – 9:00 م</div><div class="x">4 مهام ثقيلة</div>
+      </div>
+      <div class="tile" style="background:rgba(16,185,129,.32)">
+        <div class="t">راحة نهارية</div><div class="v">2.5 <span>ساعة</span></div>
+        <div class="s">1:30 – 4:00 م</div><div class="x">تغطيها الأم</div>
+      </div>
+      <div class="tile" style="background:rgba(15,23,42,.4)">
+        <div class="t">نوم ليلي</div><div class="v">8 <span>ساعات</span></div>
+        <div class="s">9:00 م – 5:00 ص</div><div class="x">لا مهام</div>
+      </div>
+      <div class="tile" style="background:rgba(124,58,237,.34)">
+        <div class="t">الأم</div><div class="v">6 <span>مهام</span></div>
+        <div class="s">الليل + تغطية الراحة</div><div class="x">كلها خفيفة</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="body">
+
+    <div class="pg1">
+    <div class="load">
+      <h3>كم ساعة تعملين فعليًا؟</h3>
+
+      <div class="statcards">
+        <div class="sc" style="border-top-color:#2563EB"><div class="v" style="color:#1D4ED8" id="cW">–</div><div class="l">عمل فعلي</div></div>
+        <div class="sc" style="border-top-color:#10B981"><div class="v" style="color:#059669" id="cR">–</div><div class="l">راحة نهارية</div></div>
+        <div class="sc" style="border-top-color:#0F172A"><div class="v" style="color:#0F172A" id="cS">–</div><div class="l">نوم ليلي</div></div>
+        <div class="sc" style="border-top-color:#94A3B8"><div class="v" style="color:#475569" id="cF">–</div><div class="l">فراغ بين المهام</div></div>
+      </div>
+
+      <div class="barlabel">يومكِ الكامل (24 ساعة) على خط زمني حقيقي — الأزرق عمل فعلي، الأخضر راحة نهارية، الغامق نوم ليلي، الرمادي وقت فراغ بين المهام:</div>
+      <div class="tlbar" id="tlbar"></div>
+      <div class="ticks"><span>5 ص</span><span>9 ص</span><span>1 م</span><span>5 م</span><span>9 م</span><span>1 ص</span><span>5 ص</span></div>
+
+      <p class="foot">من يوم كامل مدته <strong>24 ساعة</strong>، لا يتجاوز العمل الفعلي <strong>4 ساعات تقريبًا (~18% من اليوم)</strong>. وكل ما تبقّى — <strong>8 ساعات نوم ليلي</strong>، وراحتكِ النهارية، والفترات الهادئة بين المهام — وقت راحة.</p>
+
+      <div class="soon">قريبًا نهاية هذا الشهر: <strong>جهاز تغذية جديد (مضخّة)</strong>. لن تقومي بتركيب التغذية يدويًا بعد الآن — <strong>يكفي إرواء سريع (Flush) فقط</strong>. هذا سيقلّل عبء العمل أكثر.</div>
+      <div class="info">على مدار اليوم سيحتاج المريض أيضًا إلى <strong>شفط، عند الحاجة</strong> (وليس في مواعيد ثابتة).</div>
+    </div>
+
+    <div class="note">
+      <h3>ملاحظة لمقدمة الرعاية</h3>
+      <p>هذا <strong>جدول تجريبي</strong>، وقد تُعدَّل المواعيد مستقبلًا بما يتناسب مع الأفضل.</p>
+      <p>ومهما تغيّر، يبقى شيء ثابت: سيكون لكِ <strong>دائمًا</strong> فترة راحة <strong>طويلة متواصلة بلا أي مهام على الإطلاق</strong> — و8 ساعات نومكِ الليلي محفوظة بالكامل حتى لو تغيّرت المواعيد.</p>
+    </div>
+
+    </div><!-- /pg1 -->
+
+    <div class="filter">
+      <button id="b-all" class="on-all" onclick="setF('all')">الكل</button>
+      <button id="b-care" onclick="setF('caregiver')">مقدمة الرعاية</button>
+      <button id="b-mom" onclick="setF('mother')">الأم</button>
+    </div>
+
+    <div class="tl" id="tl"></div>
+
+    <div class="legend">
+      <span><span class="lg" style="background:#2563EB"></span> مقدمة الرعاية</span>
+      <span><span class="lg" style="background:#8B5CF6"></span> الأم</span>
+      <span><span class="lg" style="background:#10B981"></span> خفيف</span>
+      <span><span class="lg" style="background:#F59E0B"></span> متوسط</span>
+      <span><span class="lg" style="background:#EF4444"></span> ثقيل</span>
+    </div>
+  </div>
+</div>
+
+<script>
+const WHO = {
+  caregiver:{ c:"#1D4ED8", bg:"#EFF6FF", bd:"#93C5FD", dot:"#2563EB", name:"مقدمة الرعاية" },
+  mother:   { c:"#7C3AED", bg:"#F5F3FF", bd:"#C4B5FD", dot:"#8B5CF6", name:"الأم"          },
+};
+const EFF = {
+  light: { bg:"#D1FAE5", c:"#065F46", label:"خفيف"  },
+  medium:{ bg:"#FEF3C7", c:"#92400E", label:"متوسط" },
+  hard:  { bg:"#FEE2E2", c:"#991B1B", label:"ثقيل"  },
+};
+
+const TASKS = [
+  { time:"12:00 ص", who:"mother",    task:"تركيب تغذية 150 مل + استنشاق (NaCl ساين)", eff:"light",  min:15 },
+  { time:"1:00 ص",  who:"mother",    task:"إرواء الأنبوب (Flush) بعد التغذية",         eff:"light",  min:5  },
+  { time:"2:00 ص",  who:"mother",    task:"تركيب ماء 200 مل — يُترك يعمل، وبعدها لا مهام", eff:"light", min:5 },
+  { time:"2:00 ص",  who:"marker", kind:"rest",  task:"الأم — لا مهام حتى 4:00 ص" },
+  { time:"4:00 ص",  who:"mother",    task:"تركيب تغذية 150 مل",                        eff:"light",  min:10 },
+  { time:"5:00 ص",  who:"marker", kind:"wake",  task:"استيقاظ مقدمة الرعاية" },
+  { time:"5:00 ص",  who:"caregiver", task:"تغيير حفاض + تغيير وضعية + رفع كيس ماء الليل + إرواء (Flush)", eff:"hard",   min:25 },
+  { time:"6:00 ص",  who:"caregiver", task:"استنشاق (Ipratropium + NaCl) + تركيب ماء 200 مل", eff:"light",  min:15 },
+  { time:"7:00 ص",  who:"caregiver", task:"رفع كيس الماء",                             eff:"light",  min:5  },
+  { time:"8:00 ص",  who:"caregiver", task:"تغذية 150 مل (زاوية 45°) + جولة أدوية الصباح كاملة + قطرة عين + غسول فم + استنشاق", eff:"hard", min:30 },
+  { time:"9:00 ص",  who:"caregiver", task:"إرواء (Flush) + تغيير حفاض + تغيير وضعية",  eff:"medium", min:25 },
+  { time:"10:00 ص", who:"caregiver", task:"تركيب ماء 200 مل",                          eff:"light",  min:5  },
+  { time:"11:00 ص", who:"caregiver", task:"رفع كيس الماء",                             eff:"light",  min:5  },
+  { time:"12:00 ظ", who:"caregiver", task:"تغذية 150 مل + استنشاق (NaCl)",             eff:"light",  min:15 },
+  { time:"1:00 م",  who:"caregiver", task:"إرواء (Flush) + قطرة عين + Simethicone + استنشاق (Atrovent) + تغيير حفاض + تغيير وضعية", eff:"medium", min:30 },
+  { time:"1:30 م",  who:"marker", kind:"break", task:"راحة مقدمة الرعاية — من 1:30 م إلى 4:00 م (ساعتان و30 دقيقة · تغطيها الأم)" },
+  { time:"2:00 م",  who:"mother",    task:"تركيب ماء 200 مل (تغطية أثناء الراحة)",     eff:"light",  min:5  },
+  { time:"3:00 م",  who:"mother",    task:"رفع كيس الماء (تغطية أثناء الراحة)",        eff:"light",  min:5  },
+  { time:"4:00 م",  who:"marker", kind:"return", task:"عودة مقدمة الرعاية" },
+  { time:"4:00 م",  who:"caregiver", task:"تغذية 150 مل",                              eff:"light",  min:10 },
+  { time:"5:00 م",  who:"caregiver", task:"إرواء (Flush) + تغيير حفاض + تغيير وضعية",  eff:"medium", min:25 },
+  { time:"6:00 م",  who:"caregiver", task:"استنشاق (NaCl) + تركيب ماء 200 مل",         eff:"light",  min:15 },
+  { time:"7:00 م",  who:"caregiver", task:"رفع كيس الماء",                             eff:"light",  min:5  },
+  { time:"8:00 م",  who:"caregiver", task:"تغذية 150 مل (زاوية 45°) + جولة أدوية المساء كاملة (Clonazepam) + قطرة عين + غسول فم + استنشاق", eff:"hard", min:30 },
+  { time:"8:45 م",  who:"caregiver", task:"تغيير حفاض + تغيير وضعية (قبل النوم مباشرة)", eff:"hard",   min:20 },
+  { time:"9:00 م",  who:"marker", kind:"sleep", task:"نوم مقدمة الرعاية — 8 ساعات (من 9:00 م إلى 5:00 ص)" },
+];
+
+const MK = {
+  sleep: { dot:"#0F172A", bg:"#0F172A", c:"#fff",     bd:"#0F172A" },
+  wake:  { dot:"#F59E0B", bg:"#FFFBEB", c:"#92400E",  bd:"#FCD34D" },
+  break: { dot:"#10B981", bg:"#ECFDF5", c:"#065F46",  bd:"#6EE7B7" },
+  rest:  { dot:"#10B981", bg:"#ECFDF5", c:"#065F46",  bd:"#6EE7B7" },
+  return:{ dot:"#2563EB", bg:"#DBEAFE", c:"#1D4ED8",  bd:"#93C5FD" },
+};
+
+let filter = "all";
+function setF(f){
+  filter = f;
+  document.getElementById("b-all").className  = f==="all"?"on-all":"";
+  document.getElementById("b-care").className = f==="caregiver"?"on-care":"";
+  document.getElementById("b-mom").className  = f==="mother"?"on-mom":"";
+  render();
+}
+
+function visible(){
+  if(filter==="all") return TASKS;
+  if(filter==="caregiver") return TASKS.filter(t=>t.who==="caregiver"||t.who==="marker");
+  return TASKS.filter(t=>t.who==="mother"|| (t.who==="marker"&&["rest","break"].includes(t.kind)));
+}
+
+function render(){
+  const tl = document.getElementById("tl");
+  tl.innerHTML = visible().map(t=>{
+    if(t.who==="marker"){
+      const m = MK[t.kind];
+      return `<div class="mk">
+        <div class="time"><b style="color:#64748B">${t.time}</b></div>
+        <div class="mdot" style="background:${m.dot}"></div>
+        <div class="mcard" style="background:${m.bg};color:${m.c};border:1px solid ${m.bd}">${t.task}</div>
+      </div>`;
+    }
+    const w = WHO[t.who], e = EFF[t.eff];
+    return `<div class="row">
+      <div class="time"><b>${t.time}</b></div>
+      <div class="dot" style="background:${w.dot};box-shadow:0 0 0 2px ${w.dot}33"></div>
+      <div class="card" style="background:${w.bg};border:1px solid ${w.bd};border-inline-start:4px solid ${w.c}">
+        <div class="top">
+          <div class="task">${t.task}</div>
+          ${t.min?`<div class="min" style="background:${w.c}">${t.min} دقيقة</div>`:""}
+        </div>
+        <div class="meta">
+          <span class="who" style="color:${w.c}">${w.name}</span>
+          <span class="eff" style="background:${e.bg};color:${e.c}">${e.label}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+render();
+
+// Always print the complete schedule (ignore any active filter)
+window.addEventListener('beforeprint', ()=>setF('all'));
+
+// ===== Workload timeline (minute-by-minute over the full 24-hour day, from 5 AM) =====
+(function(){
+  const SL=1440;                                 // full day, offsets measured from 5:00 AM
+  const WORK=[                                   // [start (min from 5 AM), duration]
+    [0,25],[60,15],[120,5],[180,30],[240,25],[300,5],[360,5],
+    [420,15],[480,30],[660,10],[720,25],[780,15],[840,5],[900,30],[945,20]
+  ];
+  const REST=[510,660];                          // 1:30 PM -> 4:00 PM
+  const SLEEP=[960,1440];                         // 9:00 PM -> next 5:00 AM
+  const T=new Array(SL).fill('free');
+  for(let m=REST[0];m<REST[1];m++) T[m]='rest';
+  for(let m=SLEEP[0];m<SLEEP[1];m++) T[m]='sleep';
+  WORK.forEach(([s,d])=>{ const e=Math.min(s+d,SLEEP[0]); for(let m=s;m<e;m++) T[m]='work'; });
+
+  const COL={work:'#2563EB',rest:'#10B981',sleep:'#0F172A',free:'#CBD5E1'};
+  let html='',cur=T[0],len=1;
+  const push=(t,l)=>{ html+=`<div style="width:${(l/SL*100).toFixed(2)}%;background:${COL[t]}"></div>`; };
+  for(let i=1;i<SL;i++){ if(T[i]===cur) len++; else { push(cur,len); cur=T[i]; len=1; } }
+  push(cur,len);
+  document.getElementById('tlbar').innerHTML=html;
+
+  const cnt=t=>T.filter(x=>x===t).length;
+  const w=cnt('work'), r=cnt('rest'), s=cnt('sleep'), f=cnt('free');
+  const fmt=m=>`${Math.floor(m/60)}س ${String(m%60).padStart(2,'0')}د`;
+  document.getElementById('cW').textContent=fmt(w);
+  document.getElementById('cR').textContent=fmt(r);
+  document.getElementById('cS').textContent=fmt(s);
+  document.getElementById('cF').textContent=fmt(f);
+})();
+</script>
+</body>
+</html>

@@ -442,7 +442,7 @@ let appRole='viewer';
 const noted=new Set();
 // ---- Live shared state (real-time collaborative) ----
 const _lsSet=localStorage.setItem.bind(localStorage);
-const SYNC_RE=/^(meds_|supp_|sess_|notes$|supplies$|last_bm$|last_bath$|vitD_next$)/;
+const SYNC_RE=/^(meds_|supp_|sess_|notes$|supplies$|last_bm$|last_bath$|vitD_next$|sh$|sm$)/;
 let _applyingRemote=false,_syncReady=false;
 localStorage.setItem=function(k,v){_lsSet(k,v);if(_syncReady&&!_applyingRemote&&SYNC_RE.test(k))pushState(k,v);};
 function pushState(k,v){
@@ -454,23 +454,14 @@ function applyRemoteState(k,val){
   _applyingRemote=true;
   try{_lsSet(k,(typeof val==='string')?val:JSON.stringify(val));}finally{_applyingRemote=false;}
 }
-const ROLE_MAP={'admin@careportal.com':'admin','jocel@careportal.com':'recorder','levo@careportal.com':'recorder','mervat@careportal.com':'recorder'};
-const NIGHT_ONLY=['mervat@careportal.com']; // Wife (Mama) — may record her night-shift tasks only; view-only otherwise
-const USER_NAMES={'admin@careportal.com':'Anas','levo@careportal.com':'Nurse','mervat@careportal.com':'Mama'};
+const ROLE_MAP={'admin@careportal.com':'admin','jocel@careportal.com':'recorder'};
+const USER_NAMES={'admin@careportal.com':'Anas'};
 
 function L(ar,en){return ST.lang==='ar'?ar:en;}
 function tx(v){return v==null?'':(typeof v==='object'?(v[ST.lang]||v.ar||v.en):v);}
 function canEdit(){return appRole==='admin'||appRole==='recorder';}
 function canManage(){return appRole==='admin';}
-function isNightOnlyUser(){return !!(currentUser&&NIGHT_ONLY.includes((currentUser.email||'').toLowerCase()));}
-function canEditTask(t){if(!canEdit())return false;if(isNightOnlyUser())return isNight(t);return true;}
-function requireEditorFor(t){
-  if(canEditTask(t))return true;
-  toast(isNightOnlyUser()?L('يمكنك تسجيل مهام شيفتك (الليل) فقط','You can only record your shift (night) tasks'):L('حسابك مشاهدة فقط — لا يمكن التعديل','Viewer account — editing is disabled'),'warn');
-  return false;
-}
 function requireEditor(){
-  if(isNightOnlyUser()){toast(L('يمكنك تسجيل مهام شيفتك (الليل) فقط من الجدول','You can only record your shift (night) tasks from the schedule'),'warn');return false;}
   if(canEdit())return true;
   toast(L('حسابك مشاهدة فقط — لا يمكن التعديل','Viewer account — editing is disabled'),'warn');
   return false;
@@ -488,52 +479,51 @@ const SCHED=[
   {t:'06:00',items:[
     {id:'m0600_neb',cat:'neb',med:'Ipratropium + Sodium Chloride 0.9%',com:'Atrovent + Nebusal',dose:'250 mcg/2 ml + 3 ml',route:'Nebulizer',mix:true},
   ]},
-  {t:'07:30',items:[
-    {id:'m0730_lanso',cat:'med',med:'Lansoprazole 30 mg',com:'Lansoprazole Suspension',dose:'10 ml',route:'NG Tube',flush:true,fridge:true,note:{ar:'قبل الأكل — من التلاجة',en:'Before food — from fridge'}},
+  {t:'07:00',items:[
+    {id:'m0700_bath',cat:'care',act:{ar:'تغيير الوضعية',en:'Reposition'},position:{ar:'على الظهر (Supine)',en:'Back (Supine)'}},
   ]},
   {t:'08:00',items:[
-    {id:'m0800_clopi',cat:'med',med:'Clopidogrel 75 mg',com:'Pido 75',dose:'1 Tablet',route:'NG Tube',crush:true,flush:true,dissolve:5},
-    {id:'m0800_lina',cat:'med',med:'Linagliptin 5 mg',com:'Trajenta 5',dose:'1 Tablet',route:'NG Tube',crush:true,flush:true,dissolve:5},
-    {id:'m0800_biso',cat:'med',med:'Bisoprolol 5 mg',dose:'1 Tablet',route:'NG Tube',crush:true,flush:true,dissolve:5},
+    {id:'m0800_clopi',cat:'med',med:'Clopidogrel 75 mg',com:'Pido 75',dose:'1 Tablet',route:'NG Tube',crush:true,flush:true},
+    {id:'m0800_lina',cat:'med',med:'Linagliptin 5 mg',com:'Trajenta 5',dose:'1 Tablet',route:'NG Tube',crush:true,flush:true},
+    {id:'m0800_biso',cat:'med',med:'Bisoprolol 5 mg',dose:'1 Tablet',route:'NG Tube',crush:true,flush:true},
+    {id:'m0800_lanso',cat:'med',med:'Lansoprazole',com:'Lansoprazole Suspension',dose:'10 ml',route:'NG Tube',flush:true,fridge:true},
     {id:'m0800_keppra',cat:'med',med:'Levetiracetam',com:'Keppra Oral Solution',dose:'7.5 ml',route:'NG Tube',flush:true},
-    {id:'m0800_tears',cat:'eye',med:'Artificial Tears',com:'Alcon',dose:'1 drop / eye',route:'Both Eyes'},
+    {id:'m0800_tears',cat:'eye',med:'Artificial Tears',com:'Tears Naturale II',dose:'1 drop / eye',route:'Both Eyes'},
     {id:'m0800_chlor',cat:'mouth',med:'Chlorhexidine 0.2%',com:'Chlorhexidine Mouth Wash',dose:'oral care',route:'Oral'},
+    {id:'m0800_senna',cat:'med',med:'Senna',com:'Senna Extract',dose:'2 Tablets',route:'NG Tube',crush:true,flush:true},
     {id:'m0800_sime',cat:'med',med:'Simethicone',com:'Flat-Q Oral Drops',dose:'1 ml',route:'NG Tube',flush:true},
     {id:'m0800_neb',cat:'neb',med:'Ipratropium + Sodium Chloride',com:'Atrovent + Nebusal',route:'Nebulizer',mix:true},
-    {id:'m0800_pos',cat:'care',act:{ar:'تغيير الوضعية',en:'Reposition'},position:{ar:'على الجنب الأيمن',en:'Right Side'}},
   ]},
   {t:'12:00',items:[
     {id:'m1200_neb',cat:'neb',med:'Sodium Chloride 0.9%',com:'Nebusal',dose:'3 ml',route:'Nebulizer'},
-    {id:'m1200_pos',cat:'care',act:{ar:'تغيير الوضعية',en:'Reposition'},position:{ar:'على الجنب الأيسر',en:'Left Side'}},
+    {id:'m1200_pos',cat:'care',act:{ar:'تغيير الوضعية',en:'Reposition'},position:{ar:'على الجنب الأيمن',en:'Right Side'}},
   ]},
   {t:'13:00',items:[
-    {id:'m1300_tears',cat:'eye',med:'Artificial Tears',com:'Alcon',dose:'1 drop / eye',route:'Both Eyes'},
+    {id:'m1300_tears',cat:'eye',med:'Artificial Tears',com:'Tears Naturale II',dose:'1 drop / eye',route:'Both Eyes'},
     {id:'m1300_sime',cat:'med',med:'Simethicone',com:'Flat-Q Oral Drops',dose:'1 ml',route:'NG Tube',flush:true},
     {id:'m1300_neb',cat:'neb',med:'Ipratropium Bromide',com:'Atrovent',route:'Nebulizer'},
   ]},
   {t:'16:00',items:[
-    {id:'m1600_pos',cat:'care',act:{ar:'تغيير الوضعية',en:'Reposition'},position:{ar:'على الجنب الأيمن',en:'Right Side'}},
+    {id:'m1600_pos',cat:'care',act:{ar:'تغيير الوضعية',en:'Reposition'},position:{ar:'على الجنب الأيسر',en:'Left Side'}},
   ]},
   {t:'18:00',items:[
     {id:'m1800_neb',cat:'neb',med:'Sodium Chloride 0.9%',com:'Nebusal',dose:'3 ml',route:'Nebulizer'},
   ]},
   {t:'20:00',items:[
-    {id:'m2000_clona',cat:'med',med:'Clonazepam 0.5 mg',com:'Clonotril 0.5',dose:'1 Tablet',route:'NG Tube',crush:true,flush:true,dissolve:2,note:{ar:'يُعطى قبل النوم',en:'Bedtime'}},
+    {id:'m2000_clona',cat:'med',med:'Clonazepam 0.5 mg',com:'Clonotril 0.5',dose:'1 Tablet',route:'NG Tube',crush:true,flush:true,note:{ar:'يُعطى قبل النوم',en:'Bedtime'}},
     {id:'m2000_keppra',cat:'med',med:'Levetiracetam',com:'Keppra Oral Solution',dose:'7.5 ml',route:'NG Tube',flush:true},
-    {id:'m2000_tears',cat:'eye',med:'Artificial Tears',com:'Alcon',dose:'1 drop / eye',route:'Both Eyes'},
+    {id:'m2000_tears',cat:'eye',med:'Artificial Tears',com:'Tears Naturale II',dose:'1 drop / eye',route:'Both Eyes'},
     {id:'m2000_chlor',cat:'mouth',med:'Chlorhexidine 0.2%',com:'Chlorhexidine Mouth Wash',dose:'oral care',route:'Oral'},
     {id:'m2000_sime',cat:'med',med:'Simethicone',com:'Flat-Q Oral Drops',dose:'1 ml',route:'NG Tube',flush:true},
     {id:'m2000_pos',cat:'care',act:{ar:'تغيير الوضعية',en:'Reposition'},position:{ar:'على الظهر (Supine)',en:'Back (Supine)'}},
     {id:'m2000_neb',cat:'neb',med:'Ipratropium + Sodium Chloride',com:'Atrovent + Nebusal',route:'Nebulizer',mix:true},
   ]},
-  {t:'22:00',items:[
-    {id:'m2200_pos',cat:'care',act:{ar:'تغيير الوضعية',en:'Reposition'},position:{ar:'على الجنب الأيسر',en:'Left Side'}},
-  ]},
   {t:'00:00',items:[
     {id:'m0000_neb',cat:'neb',med:'Sodium Chloride 0.9%',com:'Nebusal',dose:'3 ml',route:'Nebulizer'},
+    {id:'m0000_pos',cat:'care',act:{ar:'تغيير الوضعية',en:'Reposition'},position:{ar:'على الجنب الأيمن',en:'Right Side'}},
   ]},
   {t:'04:00',items:[
-    {id:'m0400_pos',cat:'care',act:{ar:'تغيير الوضعية',en:'Reposition'},position:{ar:'على الظهر (Supine)',en:'Back (Supine)'}},
+    {id:'m0400_pos',cat:'care',act:{ar:'تغيير الوضعية',en:'Reposition'},position:{ar:'على الجنب الأيسر',en:'Left Side'}},
   ]},
 ];
 
@@ -617,17 +607,14 @@ const STLABEL={upcoming:{ar:'قادم',en:'Upcoming'},due:{ar:'الآن',en:'Now
 
 // ============ SESSIONS ============
 function buildSessions(){
-  // Fixed feeding times aligned with the medication clock (day starts at 12:00 AM)
-  const FEED_TIMES=['08:00','11:00','14:00','17:00','20:00','00:30'];
-  const mins=FEED_TIMES.map(t=>{const [h,m]=t.split(':').map(Number);return h*60+m;}).sort((a,b)=>a-b);
+  const base=ST.sh*60+ST.sm;
+  // 6 feeds spaced 4h, mapped onto a single day and ordered by clock (day starts at 12:00 AM)
+  const mins=Array.from({length:6},(_,k)=>((base+k*240)%1440)).sort((a,b)=>a-b);
   return mins.map((tm,i)=>{
     const h=Math.floor(tm/60),m=tm%60;
     const key=`sess_${TODAY}_${i+1}`;
     let sv=null;try{sv=JSON.parse(localStorage.getItem(key));}catch(e){}
-    // Ignore any legacy saved data that isn't the current 3-step shape (prevents crashes after the model change)
-    const steps=(sv&&Array.isArray(sv.steps)&&sv.steps.length===3)?sv.steps:[0,0,0];
-    const times=(sv&&Array.isArray(sv.times)&&sv.times.length===3)?sv.times:[null,null,null];
-    return {n:i+1,h,m,t:`${p2(h)}:${p2(m)}`,steps,times,key};
+    return {n:i+1,h,m,t:`${p2(h)}:${p2(m)}`,steps:sv?.steps||[0,0,0,0,0],times:sv?.times||[null,null,null,null,null],key};
   });
 }
 function sessStatus(s){
@@ -637,15 +624,12 @@ function sessStatus(s){
   return d>=-15&&d<245?'active':d>=245?'late':'upcoming';
 }
 const STEP_DEF=[
-  {t:{ar:'الإرواء (Flush) 50 مل قبل التغذية',en:'Flush 50 ml before feed'},h:{ar:'ماء لتنظيف الأنبوب قبل الأكل — مع إجلاس المريض بزاوية 40–45°',en:'Water to clear the tube before feeding — seat patient at 40–45°'}},
-  {t:{ar:'وضع 150 مل تغذية',en:'Place 150 ml feed'},h:{ar:'ضبط المؤقّت على ساعة كاملة — إبقاء المريض بزاوية 40–45°',en:'Set timer to exactly 1 hour — keep patient at 40–45°'}},
-  {t:{ar:'الإرواء (Flush) 50 مل بعد التغذية',en:'Flush 50 ml after feed'},h:{ar:'إلزامي — لا يُتجاوَز. انتهت الجلسة',en:'Mandatory — do not skip. Session complete'}},
+  {t:{ar:'وضع 150 مل تغذية في الجهاز',en:'Place 150 ml feed in device'},h:{ar:'ضبط المؤقّت على ساعة كاملة — مع إجلاس المريض بزاوية 40–45°',en:'Set timer to exactly 1 hour — seat patient at 40–45°'}},
+  {t:{ar:'الإرواء (Flush) للأنبوب بعد التغذية',en:'Flush tube after feed'},h:{ar:'إلزامي — لا يُتجاوَز',en:'Mandatory — do not skip'}},
+  {t:{ar:'راحة لمدة ساعة',en:'Rest 1 hour'},h:{ar:'دون أي إدخال أثناء الراحة — إبقاء المريض بزاوية 40–45°',en:'No input during rest — keep patient at 40–45°'}},
+  {t:{ar:'وضع 200 مل ماء',en:'Place 200 ml water'},h:{ar:'ضبط التدفق على ساعة كاملة — مع إجلاس المريض بزاوية 40–45°',en:'Set flow to exactly 1 hour — seat patient at 40–45°'}},
+  {t:{ar:'راحة لمدة ساعة',en:'Rest 1 hour'},h:{ar:'انتهت الجلسة — التالية بعد 4 ساعات',en:'Session complete — next in 4 hours'}},
 ];
-// Feed = step 1 (150 ml). Flushes = steps 0 & 2 (50 ml each = 100 ml water/session).
-function sessFood(list){return (list||[]).filter(s=>s.steps&&s.steps[1]).length*150;}
-function sessWater(list){return (list||[]).reduce((a,s)=>a+((s.steps&&s.steps[0])?50:0)+((s.steps&&s.steps[2])?50:0),0);}
-// Water from medications actually given today: 5 ml dissolve per crushed tablet (its own amount if set), + 50 ml flush once per med slot that has a flushable tube med.
-function medWater(md){md=md||ST.medsDone||{};let dissolve=0,flush=0;try{getSlots().forEach(s=>{let f=false;s.items.forEach(it=>{if(it.cat!=='med'||!md[it.id])return;if(it.dissolve)dissolve+=it.dissolve;else if(it.crush)dissolve+=5;if(it.flush)f=true;});if(f)flush+=50;});}catch(e){}return dissolve+flush;}
 
 // ============ DATA ============
 function loadData(){
@@ -777,6 +761,7 @@ function subscribeRealtime(){
       if(p.eventType==='DELETE')return;
       const r=p&&p.new;if(!r||!r.k||r.client_id===SID)return;
       applyRemoteState(r.k,r.v);
+      ST.sh=parseInt(localStorage.getItem('sh')||'6');ST.sm=parseInt(localStorage.getItem('sm')||'0');
       loadData();ST.sessions=buildSessions();render();
     })
     .subscribe();}catch(err){}
@@ -891,7 +876,7 @@ function render(){
     case 'reminders':pg.innerHTML=rReminders();fz.innerHTML='';break;
     case 'supplies':pg.innerHTML=rSupplies();fz.innerHTML='';break;
     case 'notes':pg.innerHTML=rNotes();fz.innerHTML='';break;
-    case 'reports':pg.innerHTML=rReports();fz.innerHTML=`<button class="fab" onclick="printReportFor(selDate,true)">${L('طباعة مع المستهلكات','Print + Supplies')}</button><button class="fab o" onclick="printReportFor(selDate,false)">${L('طباعة بدون مستهلكات','Print — no Supplies')}</button>`;break;
+    case 'reports':pg.innerHTML=rReports();fz.innerHTML=`<button class="fab" onclick="printReportFor(selDate)">${L('طباعة تقرير هذا اليوم','Print This Day')}</button>`;break;
   }
 }
 
@@ -962,7 +947,7 @@ function rNow(){
 
   // ---- Overview (shift handover snapshot) ----
   const dn=ST.sessions.filter(s=>s.steps.every(Boolean)).length;
-  const foodMl=sessFood(ST.sessions), waterMl=sessWater(ST.sessions);
+  const foodMl=ST.sessions.filter(s=>s.steps[0]).length*150, waterMl=ST.sessions.filter(s=>s.steps[3]).length*200;
   const medTotal=slots.reduce((a,s)=>a+s.items.length,0);
   const medDone=slots.reduce((a,s)=>a+s.items.filter(it=>itemDone(it.id)).length,0);
   const overdue=slots.filter(s=>slotStatus(s)==='late').length;
@@ -975,7 +960,7 @@ function rNow(){
   html+=`<div class="card b" style="grid-column:1/-1">
     <div class="card-h"><h3>${L('نظرة عامة — ملخص اليوم','Overview — Today at a glance')}</h3></div>
     <div class="ov-grid">
-      ${ovTile(L('التغذية','Feeds'),dn+' / 6',foodMl+'/900 · '+L('مية','water')+' '+(waterMl+medWater())+'/1000 ml',null,'teal')}
+      ${ovTile(L('التغذية','Feeds'),dn+' / 6',foodMl+'/900 · '+waterMl+'/1200 ml',null,'teal')}
       ${ovTile(L('الأدوية','Meds'),medDone+' / '+medTotal,overdue?L(overdue+' مواعيد فائتة',overdue+' overdue'):L('لا يوجد فائت','none overdue'),overdue?'late':'','blue')}
       ${ovTile(L('الوضعية الآن','Position'),lastPos?lastPos.pos:'—',lastPos?sinceStr(lastPos.at)+' · '+ft(lastPos.at):L('لم تُسجّل','not logged'),null,'violet')}
       ${ovTile(L('اللبوس / التبرّز','Supp / BM'),ST.suppLog.length?L('لبوس ✓','Supp ✓'):(bmHrs!=null?bmHrs+L('س','h'):'—'),bmHrs!=null?L('منذ آخر تبرّز','since last BM'):L('لا تبرّز مسجّل','no BM'),(bmHrs!=null&&bmHrs>=48)?'late':'','amber')}
@@ -1008,8 +993,8 @@ function rNow(){
   let anything=false;
 
   if(lateSess){
-    anything=true;let si=lateSess.steps.findIndex(x=>!x);if(si<0||si>=STEP_DEF.length)si=0;
-    html+=`<div class="act late"><div class="act-top"><span class="act-title">${L('تغذية فائتة — الجلسة','Overdue feed — Session')} ${lateSess.n}</span><span class="pill p-late">${to12(lateSess.t)}</span>${personChip(lateSess.t)}</div>
+    anything=true;const si=lateSess.steps.findIndex(x=>!x);
+    html+=`<div class="act late"><div class="act-top"><span class="act-title">${L('تغذية فائتة — الجلسة','Overdue feed — Session')} ${lateSess.n}</span><span class="pill p-late">${to12(lateSess.t)}</span></div>
       <div class="act-body">${L('الخطوة المطلوبة','Required step')}: <strong>${tx(STEP_DEF[si].t)}</strong><div class="mini-inst">${tx(STEP_DEF[si].h)}</div></div>
       <div style="margin-top:11px"><button class="btn btn-p btn-sm" onclick="goTab('feed')">${L('فتح التغذية','Open Feeding')}</button></div></div>`;
   }
@@ -1022,14 +1007,14 @@ function rNow(){
     if(pend.some(it=>it.flush))inst.push(L('الإرواء (Flush) بعد كل دواء مع تأكيد تنفيذه','Flush after each med and confirm it'));
     const hasMed=pend.some(it=>it.cat!=='care');
     const actTitle=hasMed?L('مطلوب الآن — أدوية','Due now — Medication'):L('مطلوب الآن — رعاية','Due now — Care');
-    html+=`<div class="act ${st==='late'?'late':''}"><div class="act-top"><span class="act-title">${actTitle}</span><span class="pill ${st==='late'?'p-late':'p-due'}">${to12(s.t)} · ${tx(STLABEL[st])}</span>${personChip(s.t)}</div>
+    html+=`<div class="act ${st==='late'?'late':''}"><div class="act-top"><span class="act-title">${actTitle}</span><span class="pill ${st==='late'?'p-late':'p-due'}">${to12(s.t)} · ${tx(STLABEL[st])}</span></div>
       <ul class="act-list">${pend.map(it=>`<li>${itemTitle(it)}${it.cat==='care'&&it.position?` — <strong>${tx(it.position)}</strong>`:''}${it.route?` <span class="chip">${it.route}</span>`:''}</li>`).join('')}</ul>
       ${inst.length?`<div style="margin-top:10px">${inst.map(i=>`<div class="mini-inst">• ${i}</div>`).join('')}</div>`:''}
       <div style="margin-top:11px"><button class="btn btn-p btn-sm" onclick="goTab('meds')">${L('فتح الأدوية','Open Meds')}</button></div></div>`;
   });
   if(actSess){
-    anything=true;let si=actSess.steps.findIndex(x=>!x);if(si<0||si>=STEP_DEF.length)si=0;
-    html+=`<div class="act feed"><div class="act-top"><span class="act-title">${L('تغذية جارية — الجلسة','Feeding in progress — Session')} ${actSess.n}</span><span class="pill p-due">${to12(actSess.t)}</span>${personChip(actSess.t)}</div>
+    anything=true;const si=actSess.steps.findIndex(x=>!x);
+    html+=`<div class="act feed"><div class="act-top"><span class="act-title">${L('تغذية جارية — الجلسة','Feeding in progress — Session')} ${actSess.n}</span><span class="pill p-due">${to12(actSess.t)}</span></div>
       <div class="act-body">${L('الخطوة التالية','Next step')}: <strong>${tx(STEP_DEF[si].t)}</strong><div class="mini-inst">${tx(STEP_DEF[si].h)}</div>
       ${si===1?`<div class="mini-inst">• ${L('الإرواء (Flush) بعد التغذية إلزامي مع تأكيده','Flush after feed is mandatory — confirm it')}</div>`:''}</div>
       <div style="margin-top:11px"><button class="btn btn-p btn-sm" onclick="goTab('feed')">${L('فتح التغذية','Open Feeding')}</button></div></div>`;
@@ -1133,17 +1118,15 @@ function rMeds(){
   let html=`<div style="text-align:end;margin-bottom:10px"><button class="btn btn-o btn-sm" onclick="printMedsSheet()">${L('طباعة الجدول للتعليم اليدوي','Print schedule for manual ticking')}</button></div>
     <div class="card b"><div class="card-h"><h3>${L('تعليمات أساسية','Key Instructions')}</h3></div>
     <div class="small" style="line-height:1.8">
-      <div>• <strong>${L('كل قرص: يُطحن ناعمًا جدًا ويُذاب في 5 مل ماء','Each tablet: crush very finely & dissolve in 5 ml water')}</strong> ${L('(Clonazepam في 2 مل فقط)','(Clonazepam in 2 ml only)')}</div>
-      <div>• ${L('تُعطى أدوية الوقت الواحد بالترتيب، وبعد آخر دواء: ','Give the slot\'s meds in order, then after the last one: ')}<strong>${L('فلش 50 مل مرة واحدة','flush 50 ml once')}</strong> ${L('— وليس بعد كل قرص','— not after each tablet')}</div>
-      <div>• ${L('الأدوية السائلة (Lansoprazole · Keppra · Flat-Q) تُعطى كما هي بدون تذويب، ثم فلش','Liquids (Lansoprazole · Keppra · Flat-Q) are given as-is without dissolving, then flush')}</div>
-      <div>• <strong>Lansoprazole</strong> ${L('يُحفظ في الثلاجة ويُعطى 7:30 قبل الأكل','kept refrigerated, given 7:30 before food')}</div>
-      <div>• ${L('إجمالي المية اليومي يجب أن يبقى تحت','Total daily water must stay under')} <strong>1000 ${L('مل','ml')}</strong></div>
+      <div>• <strong>${L('طحن جميع الأقراص طحنًا ناعمًا جدًا','Crush all tablets very finely')}</strong> ${L('قبل الإعطاء عبر أنبوب NGT','before giving via NGT')}</div>
+      <div>• ${L('بعد كل دواء عبر الأنبوب: ','After each tube med: ')}<strong>${L('الإرواء (Flush) مع تأكيده','Flush and confirm it')}</strong></div>
+      <div>• <strong>Lansoprazole</strong> ${L('يُحفظ في الثلاجة','must be kept refrigerated')}</div>
     </div></div>`;
   slots.forEach(s=>{
     const st=slotStatus(s);
     const pill={upcoming:'p-up',due:'p-due',late:'p-late',done:'p-done'}[st];
     html+=`<div class="card"><div class="card-h"><h3>${to12(s.t)}</h3><span class="pill ${pill}">${tx(STLABEL[st])}</span></div>
-      ${s.items.map(it=>rTask(it,s.t)).join('')}</div>`;
+      ${s.items.map(rTask).join('')}</div>`;
   });
 
   const lastBM=localStorage.getItem('last_bm');
@@ -1157,15 +1140,9 @@ function rMeds(){
   </div>
   <div class="card">
     <div class="card-h"><h3>Movicol (Polyethylene Glycol)</h3><span class="pill p-up">PRN</span></div>
-    <div class="t-sub" style="margin-bottom:9px">${L('كيس مُلين — يُعطى عند اللزوم (حسب الحالة)، ليس بموعد ثابت. يُذاب في 20 مل ماء ويُعطى عبر الأنبوب مع الإرواء.','Laxative sachet — given as needed (per condition), not on a fixed schedule. Dissolve in 20 ml water and give via the tube with a flush.')}</div>
+    <div class="t-sub" style="margin-bottom:9px">${L('كيس مُلين — يُعطى عند اللزوم (حسب الحالة)، ليس بموعد ثابت. يُذاب ويُعطى عبر الأنبوب مع الإرواء.','Laxative sachet — given as needed (per condition), not on a fixed schedule. Dissolve and give via the tube with a flush.')}</div>
     <button class="btn btn-o btn-sm" onclick="givePrn('Movicol')">${L('تسجيل إعطاء Movicol','Log Movicol given')}</button>
     ${ST.actionLog.filter(a=>a.detail&&a.detail.indexOf('Movicol')>-1).map(a=>`<div class="small" style="margin-top:6px;color:var(--late)">${L('أُعطي Movicol','Movicol given')} ${ft(a.at)}</div>`).join('')}
-  </div>
-  <div class="card">
-    <div class="card-h"><h3>Senna (2 Tablets)</h3><span class="pill p-up">PRN</span></div>
-    <div class="t-sub" style="margin-bottom:9px">${L('مُلين — عند اللزوم فقط (لو فيه انتفاخ أو إمساك)، ليس يوميًا. يُطحن ويُذاب ويُعطى عبر الأنبوب مع الإرواء.','Laxative — only as needed (bloating or constipation), not daily. Crush, dissolve and give via the tube with a flush.')}</div>
-    <button class="btn btn-o btn-sm" onclick="givePrn('Senna')">${L('تسجيل إعطاء Senna','Log Senna given')}</button>
-    ${ST.actionLog.filter(a=>a.detail&&a.detail.indexOf('Senna')>-1).map(a=>`<div class="small" style="margin-top:6px;color:var(--late)">${L('أُعطي Senna','Senna given')} ${ft(a.at)}</div>`).join('')}
   </div>
   <div class="card">
     <div class="card-h"><h3>${L('الاستحمام','Bath')}</h3><span class="pill p-up">${L('عند اللزوم','As needed')}</span></div>
@@ -1175,18 +1152,8 @@ function rMeds(){
   </div>`;
   return html;
 }
-function medInstr(it){
-  if(it.cat!=='med')return [];
-  const s=[];
-  if(it.dissolve) s.push(L('اطحن القرص ناعمًا جدًا وذوّبه في '+it.dissolve+' مل ماء، ثم أعطِه عبر الأنبوب','Crush the tablet very finely and dissolve in '+it.dissolve+' ml water, then give via the tube'));
-  else if(it.crush) s.push(L('اطحن القرص ناعمًا جدًا وذوّبه في 5 مل ماء، ثم أعطِه عبر الأنبوب','Crush very finely and dissolve in 5 ml water, then give via the tube'));
-  else if(it.route&&/tube/i.test(it.route)) s.push(L('أعطِ '+(it.dose||'')+' عبر الأنبوب كما هو — سائل، بدون تذويب','Give '+(it.dose||'')+' via the tube as-is — liquid, no dissolving'));
-  if(it.flush) s.push(L('فلش 50 مل بعد آخر دواء في هذا الوقت (مرة واحدة — ليس بعد كل قرص)','Flush 50 ml after this slot\'s last med (once — not after each tablet)'));
-  return s;
-}
-function rTask(it,slotT){
+function rTask(it){
   const d=itemDone(it.id);
-  const editable=slotT?canEditTask(slotT):canEdit();
   const badges=[];
   if(it.crush)badges.push(`<span class="badge bg-crush">${L('يُطحن ناعمًا جدًا','Crush finely')}</span>`);
   if(it.flush)badges.push(`<span class="badge bg-flush">${L('إرواء (Flush) بعده','Flush after')}</span>`);
@@ -1195,25 +1162,24 @@ function rTask(it,slotT){
   if(it.position)badges.push(`<span class="badge bg-pos">${L('الوضعية','Position')}: ${tx(it.position)}</span>`);
   if(it.note)badges.push(`<span class="badge bg-pos">${tx(it.note)}</span>`);
   const sub=it.dose?it.dose:'';
-  const confirm=(!d&&it.flush&&editable)?`<div class="confirm">
+  const confirm=(!d&&it.flush)?`<div class="confirm">
      ${it.crush?`<label class="cline"><input type="checkbox" id="cr_${it.id}"> ${L('تم الطحن جيدًا','Crushed finely')}</label>`:''}
      <label class="cline"><input type="checkbox" id="fl_${it.id}"> ${L('تم الإرواء (Flush) بعد الدواء','Flush done after')}</label>
    </div>`:'';
   const doneNote=d?`<div class="donenote">${L('تم','Done')} · ${ft(d.at)}${d.crushed?' · '+L('طُحن','crushed'):''}${d.flushed?' · Flush ✓':''}</div>`:'';
   return `<div class="task ${d?'done':''}">
-    ${editable?`<button class="chk" onclick="toggleTask('${it.id}')">${d?'✓':''}</button>`:`<span class="chk" style="opacity:.45;cursor:default" title="${L('مش في شيفتك','Not your shift')}">${d?'✓':''}</span>`}
+    <button class="chk" onclick="toggleTask('${it.id}')">${d?'✓':''}</button>
     <div class="t-main">
-      <div class="t-name">${itemTitle(it)}${it.route?` <span class="chip">${it.route}</span>`:''}${slotT?' '+personChip(slotT):''}</div>
+      <div class="t-name">${itemTitle(it)}${it.route?` <span class="chip">${it.route}</span>`:''}</div>
       ${sub?`<div class="t-sub" dir="ltr" style="text-align:start">${sub}</div>`:''}
       ${badges.length?`<div class="t-badges">${badges.join('')}</div>`:''}
-      ${(function(){const st=medInstr(it);return st.length?`<div style="margin-top:7px;padding:8px 11px;background:#eef5ff;border-inline-start:3px solid #2b5aa0;border-radius:8px;font-size:.82rem;line-height:1.75">${st.map((x,i)=>`<div>${i+1}. ${x}</div>`).join('')}</div>`:'';})()}
       ${confirm}${doneNote}
     </div>
   </div>`;
 }
 async function toggleTask(id){
+  if(!requireEditor())return;
   const meta=flatItems()[id];if(!meta)return;
-  if(!requireEditorFor(meta.slot))return;
   if(ST.medsDone[id]){delete ST.medsDone[id];}
   else{
     let rec={at:new Date().toISOString()};
@@ -1252,16 +1218,20 @@ function logBath(){if(!requireEditor())return;localStorage.setItem('last_bath',n
 
 // ============ FEEDING TAB ============
 function rFeed(){
-  const foodMl=sessFood(ST.sessions);
-  const waterMl=sessWater(ST.sessions);
+  const foodMl=ST.sessions.filter(s=>s.steps[0]).length*150;
+  const waterMl=ST.sessions.filter(s=>s.steps[3]).length*200;
   const dn=ST.sessions.filter(s=>s.steps.every(Boolean)).length;
   let html=`<div style="text-align:end;margin-bottom:10px"><button class="btn btn-o btn-sm" onclick="printFeedSheet()">${L('طباعة الجدول للتعليم اليدوي','Print schedule for manual ticking')}</button></div>
-  <div class="sec-lbl">${L('مواعيد التغذية','Feeding times')}</div>
-    <div class="small muted" style="margin:-2px 2px 12px">${L('الجدول ثابت: 8ص · 11ص · 2م · 5م · 8م · 12:30ص. المية: فلش 50 مل قبل وبعد كل تغذية (بدل 200 مل ماء) — الإجمالي مع الأدوية تحت 1000 مل.','Fixed schedule: 8am · 11am · 2pm · 5pm · 8pm · 12:30am. Water: 50 ml flush before & after each feed (instead of 200 ml) — total with meds under 1000 ml.')}</div>
+  ${canEdit()?`<div class="sec-lbl">${L('موعد أول جلسة تغذية','First feeding session')}</div>
+    <div class="card" style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap">
+      <div class="fg" style="margin:0;flex:1;min-width:150px"><label>${L('موعد أول جلسة الصبح','First session (morning)')}</label><input type="time" id="feedStartF" value="${p2(ST.sh)}:${p2(ST.sm)}"></div>
+      <button class="btn btn-p btn-sm" style="min-width:130px;height:44px" onclick="saveFeedTime()">${L('حفظ وبناء الجدول','Save & build')}</button>
+    </div>
+    <div class="small muted" style="margin:-2px 2px 12px">${L('سجّلي موعد أول جلسة الصبح — والجدول والتنبيهات تُبنى تلقائيًا (كل جلسة بعد السابقة بـ4 ساعات).','Set the first morning session — the schedule and reminders build automatically (each session 4 hours after the previous).')}</div>`:''}
     <div class="card">
     <div class="card-h"><h3>${L('تغذية اليوم',"Today's Feeding")}</h3><span class="small muted">${dn}/6 ${L('جلسات','sessions')}</span></div>
     <div class="prog"><div class="prog-h"><span>${L('تغذية','Food')}</span><span>${foodMl} / 900 ml</span></div><div class="bar"><div class="fill" style="width:${Math.min(100,foodMl/9)}%"></div></div></div>
-    ${(function(){const tw=waterMl+medWater();const over=tw>1000,near=tw>900;return `<div class="prog"><div class="prog-h"><span><strong>${L('إجمالي المية اليوم (تغذية + أدوية)','Total water today (feed + meds)')}</strong></span><span style="${near?'color:var(--late);font-weight:800':'font-weight:800'}">${tw} / 1000 ml</span></div><div class="bar"><div class="fill" style="width:${Math.min(100,tw/10)}%;${near?'background:var(--late)':''}"></div></div>${near?`<div class="small" style="color:var(--late);font-weight:700;margin-top:4px">${over?L('تجاوزت حد 1000 مل!','Over the 1000 ml limit!'):L('اقتربت من حد 1000 مل','Approaching the 1000 ml limit')}</div>`:''}</div>`;})()}
+    <div class="prog"><div class="prog-h"><span>${L('ماء','Water')}</span><span>${waterMl} / 1200 ml</span></div><div class="bar"><div class="fill w" style="width:${Math.min(100,waterMl/12)}%"></div></div></div>
   </div>
   <div class="warn-note"><span class="wm">!</span><span>${L('تحذير: يجب إجلاس المريض بزاوية <strong>40–45°</strong> طوال فترة التغذية ولمدة بعدها — للوقاية من الالتهاب الرئوي الشفطي.','Warning: seat the patient at <strong>40–45°</strong> throughout the feed and for a while after — to prevent aspiration pneumonia.')}</span></div>`;
   ST.sessions.forEach((s,xi)=>{
@@ -1269,27 +1239,29 @@ function rFeed(){
     const pill={done:'p-done',active:'p-due',late:'p-late',upcoming:'p-up'}[st];
     const lbl={done:{ar:'تم',en:'Done'},active:{ar:'جارية',en:'Active'},late:{ar:'فائتة',en:'Overdue'},upcoming:{ar:'قادمة',en:'Upcoming'}}[st];
     html+=`<div class="card ${st==='active'||st==='late'?'b':''}">
-      <div class="card-h"><h3>${L('الجلسة','Session')} ${s.n} <span class="muted small">· ${L('أكل','Feed')} ${to12(s.t)}</span> ${personChip(s.t)}</h3><span class="pill ${pill}">${tx(lbl)} · ${cnt}/3</span></div>
+      <div class="card-h"><h3>${L('الجلسة','Session')} ${s.n} <span class="muted small">· ${L('أكل','Feed')} ${to12(s.t)} · ${L('ماء','Water')} ${to12(waterTime(s))}</span></h3><span class="pill ${pill}">${tx(lbl)} · ${cnt}/5</span></div>
       ${STEP_DEF.map((d,si)=>rStep(d,si,xi,s)).join('')}</div>`;
   });
   return html;
 }
+function waterMin(s){return (s.h*60+s.m+120)%1440;} // water is due ~2h after the feed starts
+function waterTime(s){const w=waterMin(s);return `${p2(Math.floor(w/60))}:${p2(w%60)}`;}
 function rStep(def,si,xi,s){
   const dn=s.steps[si],prev=si===0||s.steps[si-1];
   const cls='step'+(dn?' done':prev?'':' lock');
-  const clickable=(dn||prev)&&canEditTask(s.t);
+  const clickable=dn||prev;
   const oc=clickable?`onclick="tapStep(${xi},${si})" role="button" tabindex="0"`:'';
-  const etime=si===1?to12(s.t):''; // show the expected time on the feed step
+  const etime=si===0?to12(s.t):(si===3?to12(waterTime(s)):''); // show the expected time on the feed & water steps
   return `<div class="${cls}" ${oc}>
     <div class="num">${dn?'✓':si+1}</div>
     <div style="flex:1"><div class="s-t">${tx(def.t)}${etime?` <span class="muted small" style="font-weight:700">· ${etime}</span>`:''}</div><div class="s-h">${tx(def.h)}</div>${s.times[si]?`<div class="s-d">${L('تم','done')} · ${ft(s.times[si])}</div>`:''}</div>
   </div>`;
 }
 function tapStep(xi,si){
+  if(!requireEditor())return;
   const s=ST.sessions[xi];
-  if(!s||!requireEditorFor(s.t))return;
   if(si>0&&!s.steps[si-1]&&!s.steps[si]){toast(L('يلزم إكمال الخطوة السابقة أولًا','Complete previous step first'),'warn');return;}
-  if(s.steps[si]){for(let i=si;i<STEP_DEF.length;i++){s.steps[i]=0;s.times[i]=null;}}
+  if(s.steps[si]){for(let i=si;i<5;i++){s.steps[i]=0;s.times[i]=null;}}
   else{
     s.steps[si]=1;s.times[si]=new Date().toISOString();
     logAct('feed',`${L('الجلسة','Session')} ${s.n} — ${tx(STEP_DEF[si].t)}`);
@@ -1302,42 +1274,6 @@ function tapStep(xi,si){
 // ============ INSTRUCTIONS TAB ============
 function rInstr(){
   return `
-    <div class="card b" style="border-color:var(--accent)">
-      <div class="card-h"><h3>👋 ${L('ابدأ من هنا','Start here')}</h3></div>
-      <div class="small" style="line-height:1.95">
-        <div>• ${L('تبويب <strong>«الآن»</strong> بيقولك المطلوب في اللحظة دي (تغذية / دواء / تقليب) — ابدأ منه دايمًا.','The <strong>Now</strong> tab tells you what is due right now (feed / med / reposition) — always start there.')}</div>
-        <div>• ${L('تبويب <strong>«الأدوية»</strong>: كل دواء تحته خطوات إعطائه (تذويب وفلش) وعلامة تأكيد بعد الإعطاء.','The <strong>Meds</strong> tab: each medication shows its steps (dissolving & flush) and a confirm box after giving.')}</div>
-        <div>• ${L('تبويب <strong>«التغذية»</strong>: 3 خطوات لكل جلسة — فلش 50 قبل، 150 تغذية، فلش 50 بعد.','The <strong>Feeding</strong> tab: 3 steps per session — flush 50 before, 150 feed, flush 50 after.')}</div>
-        <div>• ${L('اقرأ باقي هذا التبويب مرة واحدة: الشفط، التبخير، التقليب، والطوارئ.','Read the rest of this tab once: suctioning, nebulizer, repositioning, and emergencies.')}</div>
-        <div>• ${L('سجّل كل إجراء أول ما تعمله — التطبيق يحفظ ويعمل تقرير يومي تلقائي.','Log every action as you do it — the app saves it and builds an automatic daily report.')}</div>
-      </div>
-    </div>
-
-    <div class="sec-lbl">${L('الطوارئ وأرقام التواصل','Emergency & Contacts')}</div>
-    <div class="card" style="border:2px solid var(--late)">
-      <div style="font-weight:800;color:var(--late);margin-bottom:8px">${L('العلامات دي = طوارئ. اتصل بالطوارئ 999 فورًا:','These signs = emergency. Call 999 immediately:')}</div>
-      <div class="note-info" style="line-height:1.95">
-        <div>• ${L('<strong>نزيف</strong> من أي مكان أو كدمات غير معتادة — المريض على <strong>Clopidogrel</strong> (مضاد صفائح يزيد خطر النزيف).','<strong>Bleeding</strong> anywhere or unusual bruising — patient is on <strong>Clopidogrel</strong> (antiplatelet, raises bleeding risk).')}</div>
-        <div>• ${L('<strong>قيء بُنّي</strong> (يشبه القهوة)، أو دم في الإفرازات أو البراز.','<strong>Coffee-ground vomiting</strong>, or blood in secretions or stool.')}</div>
-        <div>• ${L('صعوبة تنفس، ازرقاق، أو هبوط الأكسجين — اشتباه <strong>شفط/اختناق</strong>.','Difficulty breathing, bluish color, or dropping SpO₂ — suspected <strong>aspiration/choking</strong>.')}</div>
-        <div>• ${L('حرارة عالية، تشنجات متكررة، أو خروج/انسداد أنبوب التغذية.','High fever, repeated seizures, or the feeding tube coming out or blocked.')}</div>
-      </div>
-      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line);line-height:2.2">
-        <div>🚨 <strong>${L('في حالة طوارئ','In an emergency')}:</strong> ${L('اتصل بالطوارئ','call Emergency')} <span dir="ltr" style="font-weight:800;font-size:1.05em">999</span></div>
-        <div style="margin-top:5px">🏥 <strong>${L('لزيارة طبيب للمتابعة أو أي أمر طبي آخر','For a follow-up doctor visit or any other medical matter')}:</strong> ${L('قسم الرعاية المنزلية Home Care','Home Care department')} — <span dir="ltr" style="font-weight:800;font-size:1.05em">44390111</span></div>
-      </div>
-    </div>
-
-    <div class="sec-lbl">${L('الروتين اليومي والورديات','Daily Routine & Shifts')}</div>
-    <div class="card">
-      <div class="note-info" style="line-height:1.95">
-        <div><strong>${L('وردية النهار — النيرس (Nurse)','Day shift — Nurse')}:</strong> ${L('من 6ص لـ10:30م. تعمل التغذيات والأدوية والبخّار والتقليب. راحة ساعتين ظهرًا (3–5م).','6am–10:30pm. Handles feeds, meds, neb & repositioning. 2-hour midday rest (3–5pm).')}</div>
-        <div style="margin-top:6px"><strong>${L('راحة النيرس (Nurse) بالليل','Nurse night rest')}:</strong> ${L('8 ساعات متواصلة (10:30م → 6ص). قبل النوم تقلّب المريض على جنبه.','8 continuous hours (10:30pm → 6am). Turns the patient onto their side before sleeping.')}</div>
-        <div style="margin-top:6px"><strong>${L('وردية الليل — ماما (Wife)','Night shift — Wife')}:</strong> ${L('تغطّي تغذية 12:30ص، وآخر مهمة لها الفلش 1:30ص ثم النوم، وتقلّب المريض على ظهره وقت الفجر (~4:15ص).','Covers the 12:30am feed; last task is the 1:30am flush then sleep; turns the patient onto their back at Fajr (~4:15am).')}</div>
-      </div>
-      <div class="note-info" style="margin-top:8px">${L('مواعيد التغذية: 8ص · 11ص · 2م · 5م · 8م · 12:30ص. مواعيد الأدوية: 7:30 · 8ص · 1م · 8م. التفاصيل الكاملة في تبويبَي التغذية والأدوية.','Feed times: 8am · 11am · 2pm · 5pm · 8pm · 12:30am. Med times: 7:30 · 8am · 1pm · 8pm. Full details in the Feeding and Meds tabs.')}</div>
-    </div>
-
     <div class="sec-lbl">${L('الشفط والأكسجين','Suctioning & Oxygen')}</div>
     <div class="card b">
       <div class="card-h"><h3>${L('بروتوكول الشفط','Suctioning Protocol')}</h3></div>
@@ -1360,39 +1296,23 @@ function rInstr(){
       <div class="note-info">${L('يجب <strong>متابعة جهاز الشفط باستمرار</strong>، وتفريغه أو تغييره <strong>فور امتلائه</strong>.','<strong>Continuously monitor the suction device</strong>, and empty or replace it <strong>as soon as it is full</strong>.')}</div>
     </div>
 
-    <div class="sec-lbl">${L('جهاز التبخير (Nebulizer)','Nebulizer')}</div>
-    <div class="card b">
-      <div class="card-h"><h3>${L('طريقة التركيب','How to set it up')}</h3></div>
-      <ol class="plist">
-        <li>${L('ضع محلول الدواء في الجهاز حسب جدول البخّار (مخلوط: Ipratropium 2مل + صوديوم كلوريد 3مل، أو أحدهما منفردًا).','Put the solution in the device per the neb schedule (mixed: Ipratropium 2 ml + Sodium Chloride 3 ml, or one alone).')}</li>
-        <li>${L('فُكّ الكوّرة الموجودة في الرقبة، وافصل منها أنبوب الأكسجين.','Detach the cap (\"ball\") on the neck, and disconnect the oxygen tube from it.')}</li>
-        <li>${L('وصّل أنبوب الأكسجين بجهاز التبخير.','Connect the oxygen tube to the nebulizer.')}</li>
-        <li>${L('ركّب أنبوب الجهاز في الرقبة مكان الكوّرة من الجهة الأخرى.','Fit the nebulizer\'s tube into the neck in place of the cap, from the other side.')}</li>
-        <li>${L('ارفع درجة الأكسجين إلى <strong>3</strong>.','Raise the oxygen to <strong>3</strong>.')}</li>
-        <li>${L('المدة حوالي <strong>15 دقيقة</strong> حتى ينتهي المحلول.','Takes about <strong>15 minutes</strong> until the solution finishes.')}</li>
-      </ol>
-      <div class="note-info" style="margin-top:8px">${L('مواعيد البخّار ونوعه (مخلوط أو منفرد) موجودة في تبويب الأدوية حسب كل وقت.','Neb times and type (mixed or single) are shown in the Meds tab for each slot.')}</div>
-    </div>
-
     <div class="sec-lbl">${L('الأدوية','Medications')}</div>
     <div class="card"><div class="note-info" style="line-height:1.9">
       <div>• ${L('طحن جميع الأقراص طحنًا <strong>ناعمًا جدًا</strong> قبل الإعطاء عبر أنبوب NGT.','Crush all tablets <strong>very finely</strong> before giving via NGT.')}</div>
-      <div>• ${L('كل قرص: يُطحن ناعمًا ويُذاب في <strong>5 مل ماء</strong> (Clonazepam في <strong>2 مل</strong>). السوائل تُعطى كما هي بدون تذويب. عدم خلط الأدوية معًا.','Each tablet: crush and dissolve in <strong>5 ml water</strong> (Clonazepam in <strong>2 ml</strong>). Liquids are given as-is without dissolving. Do not mix medications together.')}</div>
-      <div>• ${L('تُعطى أدوية الوقت الواحد بالترتيب، وبعد <strong>آخر دواء: فلش 50 مل مرة واحدة</strong> — وليس بعد كل قرص، للحفاظ على حد المية اليومي (تحت 1000 مل).','Give the slot\'s meds in order, then after <strong>the last one: flush 50 ml once</strong> — not after each tablet, to stay under the daily water limit (below 1000 ml).')}</div>
-      <div>• ${L('دواء <strong>Lansoprazole</strong> يُحفظ في الثلاجة دائمًا ويُعطى 7:30 قبل الأكل.','<strong>Lansoprazole</strong> must always be kept refrigerated, given 7:30 before food.')}</div>
+      <div>• ${L('إعطاء كل دواء <strong>منفردًا</strong>، مع <strong>الإرواء (Flush) بالماء بين كل دواء والتالي وبعد آخر دواء</strong> — لمنع انسداد الأنبوب وتفاعل الأدوية. عدم خلط الأدوية معًا.','Give each medication <strong>separately</strong>, with a <strong>water flush between each and after the last</strong> — to prevent tube blockage and drug interactions. Do not mix medications together.')}</div>
+      <div>• ${L('دواء <strong>Lansoprazole</strong> يُحفظ في الثلاجة دائمًا.','<strong>Lansoprazole</strong> must always be kept refrigerated.')}</div>
       <div>• ${L('جلسات الاستنشاق (Nebulizer): تُخلط الأدوية المشتركة معًا حسب الجدول.','Nebulizer sessions: mix combined solutions together per the schedule.')}</div>
     </div></div>
 
     <div class="sec-lbl">${L('التغذية','Feeding')}</div>
     <div class="card"><div class="note-info" style="line-height:1.9">
-      <div>• ${L('كل جلسة: <strong>فلش 50 مل</strong> قبل التغذية، ثم 150 مل تغذية على مدى ساعة (بزاوية 40–45°)، ثم <strong>فلش 50 مل</strong> بعدها. المية الإجمالية مع الأدوية تحت 1000 مل/يوم.','Each session: <strong>50 ml flush</strong> before feed, then 150 ml feed over 1 hour (at 40–45°), then <strong>50 ml flush</strong> after. Total water with meds stays under 1000 ml/day.')}</div>
+      <div>• ${L('كل جلسة: 150 مل تغذية على مدى ساعة، ثم <strong>الإرواء (Flush)</strong>، ثم راحة ساعة، ثم 200 مل ماء على مدى ساعة، ثم راحة ساعة.','Each session: 150 ml feed over 1 hour, then <strong>Flush</strong>, rest 1 hour, 200 ml water over 1 hour, rest 1 hour.')}</div>
       <div>• ${L('<strong>الإرواء (Flush) بعد التغذية إلزامي</strong> ولا يُتجاوَز.','<strong>Flush after feed is mandatory</strong> — never skip it.')}</div>
     </div></div>
 
     <div class="sec-lbl">${L('تغيير الوضعية','Repositioning')}</div>
     <div class="card"><div class="note-info">
-      ${L('تغيير الوضعية بالتناوب: <strong>على الظهر ← الجنب الأيمن ← الجنب الأيسر</strong> ثم يُعاد التسلسل.','Reposition in rotation: <strong>Back → Right side → Left side</strong>, then repeat.')}
-      <div style="margin-top:8px;padding:8px 11px;background:#fef3e2;border-inline-start:3px solid #b45309;border-radius:8px">${L('<strong>بالليل تقليبتين فقط (تسهيلًا لماما):</strong> النيرس تقلّبه <strong>على جنبه قبل ما تنام</strong> (10م)، وماما تقلّبه <strong>من الجنب للظهر</strong> وقت الفجر (~4ص) — دي أسهل تقليبة.','<strong>At night, only two turns (to keep it easy for the Wife):</strong> the nurse turns him <strong>onto his side before sleeping</strong> (10pm), and the Wife turns him <strong>from his side to his back</strong> at Fajr (~4am) — the easiest turn.')}</div>
+      ${L('تغيير الوضعية كل 4 ساعات بالتناوب: <strong>على الظهر ← الجنب الأيمن ← الجنب الأيسر</strong> ثم يُعاد التسلسل.','Reposition every 4 hours in rotation: <strong>Back → Right side → Left side</strong>, then repeat.')}
       <div class="o2seq" style="margin-top:12px">
         <span class="o2" style="min-width:auto;padding:0 12px">${L('الظهر','Back')}</span><span class="o2sep">←</span>
         <span class="o2" style="min-width:auto;padding:0 12px">${L('الأيمن','Right')}</span><span class="o2sep">←</span>
@@ -1441,7 +1361,7 @@ const VITAL_DEF=[
   {k:'glucose',ar:'سكر الدم',en:'Blood glucose',unit:'mmol/L',ph:'5.5',step:'0.1'},
 ];
 // Daily vital-signs routine — 3 times/day (morning 6, afternoon 2, night 10)
-const VITALS_TIMES=['07:00','15:00','21:00']; // reminder times only, kept clear of other tasks — timing is flexible
+const VITALS_TIMES=['06:00','14:00','22:00']; // reminder times only — timing is flexible
 const VIT_ORD=[{ar:'القياس الأول',en:'1st reading'},{ar:'القياس الثاني',en:'2nd reading'},{ar:'القياس الثالث',en:'3rd reading'}];
 // 3 checks/day with FLEXIBLE timing: any reading counts toward the next open slot,
 // regardless of the exact clock time it was taken.
@@ -1572,7 +1492,6 @@ function rSupplies(){
       <button type="button" class="seg-b ${supFilter==='all'?'on':''}" onclick="setSupFilter('all')">${L('الكل','All')}</button>
       <button type="button" class="seg-b ${supFilter==='med'?'on':''}" onclick="setSupFilter('med')">${L('الأدوية','Medications')}</button>
       <button type="button" class="seg-b ${supFilter==='supply'?'on':''}" onclick="setSupFilter('supply')">${L('المستهلكات','Supplies')}</button>
-      <button type="button" class="seg-b ${supFilter==='low'?'on':''}" onclick="setSupFilter('low')" style="color:var(--late)">${L('قرب النفاد','Low stock')}</button>
     </div>
   </div>`;
   const meds=list.filter(s=>s.type==='med');
@@ -1592,22 +1511,21 @@ function rSupGroup(title,items,color,gtype){
 function pickSupType(t){supAddType=t;document.querySelectorAll('#supTypeSeg .seg-b').forEach((b,i)=>b.classList.toggle('on',(t==='med')?i===0:i===1));}
 function setSupFilter(t){
   supFilter=t;
-  document.querySelectorAll('#supFilterSeg .seg-b').forEach((b,i)=>b.classList.toggle('on',['all','med','supply','low'][i]===t));
+  document.querySelectorAll('#supFilterSeg .seg-b').forEach((b,i)=>b.classList.toggle('on',['all','med','supply'][i]===t));
   filterSupplies();
 }
 function filterSupplies(){
-  const q=supQuery, lowOnly=(supFilter==='low');
+  const q=supQuery;
   document.querySelectorAll('.sup-group').forEach(g=>{
     const gt=g.getAttribute('data-gtype');
-    const allowed=(supFilter==='all'||lowOnly||supFilter===gt);
+    const allowed=(supFilter==='all'||supFilter===gt);
     let vis=0,low=0;
     g.querySelectorAll('.sup-card').forEach(c=>{
-      const need=c.getAttribute('data-sneed')==='1';
-      const show=allowed&&(!lowOnly||need)&&(!q||(c.getAttribute('data-sname')||'').indexOf(q)>-1);
+      const show=allowed&&(!q||(c.getAttribute('data-sname')||'').indexOf(q)>-1);
       c.style.display=show?'':'none';
       if(show){vis++;if(c.getAttribute('data-slow')==='1')low++;}
     });
-    g.style.display=(allowed&&(!lowOnly||vis>0))?'':'none';
+    g.style.display=allowed?'':'none';
     const cnt=g.querySelector('.sup-count');if(cnt)cnt.textContent=`(${vis})`;
     const lowEl=g.querySelector('.sup-low');if(lowEl){lowEl.style.display=low?'':'none';lowEl.textContent=low?` — ${low} ${L('قرب النفاد','running low')}`:'';}
     const emp=g.querySelector('.sup-empty');if(emp)emp.style.display=(allowed&&vis===0)?'':'none';
@@ -1619,7 +1537,7 @@ function rSupply(s){
   const low=!isMed&&rem<=2&&rem>0, showOut=!isMed&&out;
   const status=showOut?L('نفد المخزون','Out of stock'):low?L('قرب النفاد','Running low'):'';
   const col=showOut?'var(--late)':low?'var(--due)':'var(--mut)';
-  return `<div class="card sup-card" data-sname="${esc((s.name||'').toLowerCase())}" data-stype="${s.type==='med'?'med':'supply'}" data-slow="${low?1:0}" data-sneed="${(!isMed&&rem<=2)?1:0}" style="${showOut?'border-color:var(--late-l);background:var(--late-bg)':low?'border-color:var(--due-l);background:var(--due-bg)':''}">
+  return `<div class="card sup-card" data-sname="${esc((s.name||'').toLowerCase())}" data-stype="${s.type==='med'?'med':'supply'}" data-slow="${low?1:0}" style="${showOut?'border-color:var(--late-l);background:var(--late-bg)':low?'border-color:var(--due-l);background:var(--due-bg)':''}">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
       <div style="min-width:0;flex:1">
         <div style="font-weight:800;font-size:.95rem">${esc(s.name)}${status?` <span class="pill ${showOut?'p-late':'p-due'}" style="margin-inline-start:4px">${status}</span>`:''}</div>
@@ -1759,7 +1677,7 @@ function dayData(date){
   try{supp=JSON.parse(localStorage.getItem('supp_'+date)||'[]');}catch(e){}
   try{acts=JSON.parse(localStorage.getItem('acts_'+date)||'[]');}catch(e){}
   try{vitals=JSON.parse(localStorage.getItem('vitals_'+date)||'[]');}catch(e){}
-  for(let i=1;i<=6;i++){let sv=null;try{sv=JSON.parse(localStorage.getItem('sess_'+date+'_'+i));}catch(e){}sessions.push(sv||{steps:[0,0,0],times:[null,null,null]});}
+  for(let i=1;i<=6;i++){let sv=null;try{sv=JSON.parse(localStorage.getItem('sess_'+date+'_'+i));}catch(e){}sessions.push(sv||{steps:[0,0,0,0,0],times:[null,null,null,null,null]});}
   return {medsDone,supp,acts,vitals,sessions};
 }
 function loadDay(date){
@@ -1799,8 +1717,8 @@ function mBadge(st){
 }
 function rReports(){
   const d=loadDay(selDate);
-  const foodMl=sessFood(d.sessions);
-  const waterMl=sessWater(d.sessions);
+  const foodMl=d.sessions.filter(s=>s.steps&&s.steps[0]).length*150;
+  const waterMl=d.sessions.filter(s=>s.steps&&s.steps[3]).length*200;
   const vitals=(d.vitals||[]).slice().sort((a,b)=>a.at.localeCompare(b.at));
   const items=adminItems();
   const givenCount=items.filter(it=>d.medsDone[it.id]).length;
@@ -1823,8 +1741,8 @@ function rReports(){
   html+=`<div class="sec-lbl">${L('2 · التغذية خلال اليوم','2 · Feeding Intake')}</div>
     <div class="card">
       <div class="prog"><div class="prog-h"><span>${L('إجمالي التغذية','Total food')}</span><span dir="ltr">${foodMl} / 900 ml</span></div><div class="bar"><div class="fill" style="width:${Math.min(100,foodMl/9)}%"></div></div></div>
-      <div class="prog"><div class="prog-h"><span>${L('إجمالي المية (تغذية + أدوية)','Total water (feed + meds)')}</span><span dir="ltr">${waterMl+medWater(d.medsDone)} / 1000 ml</span></div><div class="bar"><div class="fill w" style="width:${Math.min(100,(waterMl+medWater(d.medsDone))/10)}%"></div></div></div>
-      <div style="margin-top:6px">${d.sessions.map((s,i)=>{const f=s.steps&&s.steps[1],w=s.steps&&s.steps[2];return `<div class="idrow"><span class="k">${L('الجلسة','Session')} ${i+1}</span><span class="v" dir="ltr" style="font-weight:600">${f?L('تغذية ✓','Feed ✓')+(s.times&&s.times[1]?' '+ft(s.times[1]):''):L('—','—')} · ${w?L('فلش ✓','Flush ✓'):L('—','—')}</span></div>`;}).join('')}</div>
+      <div class="prog"><div class="prog-h"><span>${L('إجمالي الماء','Total water')}</span><span dir="ltr">${waterMl} / 1200 ml</span></div><div class="bar"><div class="fill w" style="width:${Math.min(100,waterMl/12)}%"></div></div></div>
+      <div style="margin-top:6px">${d.sessions.map((s,i)=>{const f=s.steps&&s.steps[0],w=s.steps&&s.steps[3];return `<div class="idrow"><span class="k">${L('الجلسة','Session')} ${i+1}</span><span class="v" dir="ltr" style="font-weight:600">${f?L('تغذية ✓','Feed ✓')+(s.times&&s.times[0]?' '+ft(s.times[0]):''):L('—','—')} · ${w?L('ماء ✓','Water ✓'):L('—','—')}</span></div>`;}).join('')}</div>
     </div>`;
 
   // 3) Medications
@@ -1859,11 +1777,21 @@ function openSet(){
   document.getElementById('setMod').classList.add('op');
 }
 function closeSet(){document.getElementById('setMod').classList.remove('op');}
+function saveFeedTime(){
+  if(!requireEditor())return;
+  const el=document.getElementById('feedStartF');
+  if(!el||!el.value){toast(L('اختاري موعد أول جلسة','Pick the first session time'),'warn');return;}
+  const[h,m]=el.value.split(':').map(Number);
+  if(isNaN(h)||isNaN(m)){toast(L('موعد غير صحيح','Invalid time'),'warn');return;}
+  ST.sh=h;ST.sm=m;localStorage.setItem('sh',h);localStorage.setItem('sm',m);
+  ST.sessions=buildSessions();render();
+  toast(L('تم بناء جدول التغذية من موعد أول جلسة','Schedule built from the first session'),'ok');
+}
 async function resetToday(){
   if(!requireEditor())return;
   if(!(await uiConfirm(L('مسح جميع تسجيلات اليوم (الأدوية والتغذية والسجل)؟ لا يمكن التراجع.',"Clear all of today's records? Cannot be undone."),{danger:true,ok:L('مسح','Clear')})))return;
   localStorage.setItem(`meds_${TODAY}`,'{}');localStorage.setItem(`supp_${TODAY}`,'[]');localStorage.removeItem(`acts_${TODAY}`);localStorage.removeItem(`vitals_${TODAY}`);
-  ST.sessions.forEach(s=>localStorage.setItem(s.key,JSON.stringify({steps:[0,0,0],times:[null,null,null]})));
+  ST.sessions.forEach(s=>localStorage.setItem(s.key,JSON.stringify({steps:[0,0,0,0,0],times:[null,null,null,null,null]})));
   ST.medsDone={};ST.suppLog=[];ST.actionLog=[];ST.vitals=[];ST.sessions=buildSessions();
   closeSet();render();toast(L('تم مسح تسجيلات اليوم',"Today's records cleared"),'ok');
 }
@@ -1910,12 +1838,6 @@ function toggleNotif(){
   }
 }
 let notifTimer=null;
-// Night window = Mama's (Wife) overnight shift — its reminders get a distinctive "قومي" prefix to wake her.
-function isNight(t){const h=parseInt((t||'0').split(':')[0],10);return h<6||h>=23;}
-function nTitle(t,title){return isNight(t)?L('قومي 🌙 — ','Wake up 🌙 — ')+title:title;}
-// Who does a task, by its time: night window → Mama (Wife), otherwise the Nurse.
-function personFor(t){return isNight(t)?{ar:'ماما (Wife)',en:'Wife',night:true}:{ar:'النيرس (Nurse)',en:'Nurse',night:false};}
-function personChip(t){const p=personFor(t);const bg=p.night?'#fef3e2':'#e3f4f2',col=p.night?'#b45309':'#0f766e';return `<span style="display:inline-block;font-size:10.5px;font-weight:700;padding:1px 8px;border-radius:20px;background:${bg};color:${col};white-space:nowrap">👤 ${L(p.ar,p.en)}</span>`;}
 function startNotifLoop(){if(notifTimer)return;checkNotifs();notifTimer=setInterval(checkNotifs,30000);}
 function checkNotifs(){
   if(!notifOn||!('Notification'in window)||Notification.permission!=='granted')return;
@@ -1923,15 +1845,20 @@ function checkNotifs(){
   getSlots().forEach(s=>{
     if(slotAllDone(s))return;
     const d=hm2min(s.t)-n,lbl=slotDesc(s); // describes meds and/or reposition due at this slot
-    if(d===15)fire(`m${s.t}15`,nTitle(s.t,L(`تذكير: ${lbl} بعد 15 دقيقة`,`${lbl} reminder — in 15 min`)),`${to12(s.t)}`);
-    if(d===0)fire(`m${s.t}0`,nTitle(s.t,L(`موعد ${lbl} الآن`,`${lbl} due now`)),`${to12(s.t)}`);
+    if(d===15)fire(`m${s.t}15`,L(`تذكير: ${lbl} بعد 15 دقيقة`,`${lbl} reminder — in 15 min`),`${to12(s.t)}`);
+    if(d===0)fire(`m${s.t}0`,L(`موعد ${lbl} الآن`,`${lbl} due now`),`${to12(s.t)}`);
   });
   ST.sessions.forEach(s=>{
     if(s.steps.every(Boolean))return;
     if(!s.steps[0]){ // feed not started yet → remind at the feed time
       const d=(s.h*60+s.m)-n;
-      if(d===15)fire(`f${s.n}15`,nTitle(s.t,L('تذكير: تغذية بعد 15 دقيقة','Reminder: feed in 15 min')),`${L('الجلسة','Session')} ${s.n} — ${to12(s.t)}`);
-      if(d===0)fire(`f${s.n}0`,nTitle(s.t,L('موعد التغذية الآن','Feeding time now')),`${L('الجلسة','Session')} ${s.n}`);
+      if(d===15)fire(`f${s.n}15`,L('تذكير: تغذية بعد 15 دقيقة','Reminder: feed in 15 min'),`${L('الجلسة','Session')} ${s.n} — ${to12(s.t)}`);
+      if(d===0)fire(`f${s.n}0`,L('موعد التغذية الآن','Feeding time now'),`${L('الجلسة','Session')} ${s.n}`);
+    }
+    if(!s.steps[3]){ // water not given yet → remind at the water time (feed + 2h)
+      const wd=waterMin(s)-n;
+      if(wd===15)fire(`w${s.n}15`,L('تذكير: ماء بعد 15 دقيقة','Reminder: water in 15 min'),`${L('الجلسة','Session')} ${s.n} — ${to12(waterTime(s))}`);
+      if(wd===0)fire(`w${s.n}0`,L('موعد الماء الآن','Water time now'),`${L('الجلسة','Session')} ${s.n} — 200 ml`);
     }
   });
   // Vital-signs reminders (3×/day) — only nudge for a check that isn't done yet
@@ -1957,6 +1884,7 @@ async function syncDown(){
     // shared live state (meds checkmarks, feeding steps, notes, supplies, ...)
     const{data:st}=await sb.from('app_state').select('k,v');
     if(st&&st.length)st.forEach(row=>applyRemoteState(row.k,row.v));
+    ST.sh=parseInt(localStorage.getItem('sh')||'6');ST.sm=parseInt(localStorage.getItem('sm')||'0');
     // activity log (server-authoritative for today)
     const{data:al}=await sb.from('action_log').select('*').eq('log_date',TODAY).order('logged_at');
     if(al&&al.length){
@@ -2108,7 +2036,7 @@ function printFeedSheet(){
     body+=`<tr><td><strong>${L('جلسة','Session')} ${s.n}</strong><br><span style="color:#657085;font-size:11px">${to12(s.t)}</span></td>${STEP_DEF.map(()=>`<td style="text-align:center"><span class="box"></span></td>`).join('')}</tr>`;
   });
   body+=`</tbody></table>
-    <p style="font-size:11px;color:#657085;margin-top:10px">${L('إجمالي اليوم: 6 جلسات · 900 مل تغذية · 600 مل ماء إرواء (فلش 50 قبل وبعد كل تغذية)','Daily total: 6 sessions · 900 ml feed · 600 ml flush water (50 ml flush before & after each feed)')}</p>`;
+    <p style="font-size:11px;color:#657085;margin-top:10px">${L('إجمالي اليوم: 6 جلسات · 900 مل تغذية · 1200 مل ماء','Daily total: 6 sessions · 900 ml feed · 1200 ml water')}</p>`;
   const feedCss=`
     @page{size:A4 landscape;margin:1cm}
     th{padding:10px 11px;font-size:11.5px}
@@ -2117,9 +2045,9 @@ function printFeedSheet(){
   `;
   printWindow(L('جدول التغذية','Feeding Schedule'),body,feedCss);
 }
-function printReportFor(date,withSupplies){
+function printReportFor(date){
   const d=loadDay(date);
-  const foodMl=sessFood(d.sessions),waterMl=sessWater(d.sessions);
+  const foodMl=d.sessions.filter(s=>s.steps&&s.steps[0]).length*150,waterMl=d.sessions.filter(s=>s.steps&&s.steps[3]).length*200;
   const vitals=(d.vitals||[]).slice().sort((a,b)=>a.at.localeCompare(b.at));
   const items=adminItems();const givenCount=items.filter(it=>d.medsDone[it.id]).length;
   const dayNotes=ST.notes.filter(n=>n.date===date).sort((a,b)=>a.at.localeCompare(b.at));
@@ -2144,9 +2072,9 @@ function printReportFor(date,withSupplies){
   <tbody>${vitals.map(v=>`<tr><td>${ft(v.at)}</td><td>${v.temp??'—'}</td><td>${(v.sys!=null||v.dia!=null)?(v.sys??'—')+'/'+(v.dia??'—'):'—'}</td><td>${v.pulse??'—'}</td><td>${v.rr??'—'}</td><td>${v.spo2??'—'}</td><td>${v.glucose??'—'}</td><td class="${v.urine==='abnormal'?'r':''}">${v.urine?({none:'None',normal:'Normal',abnormal:'Abnormal'}[v.urine])+(v.urineNote?` (${esc(v.urineNote)})`:''):'—'}</td><td class="${v.stool==='abnormal'?'r':''}">${v.stool?({none:'None',normal:'Normal',abnormal:'Abnormal'}[v.stool])+(v.stoolNote?` (${esc(v.stoolNote)})`:''):'—'}</td></tr>`).join('')}</tbody></table>`:'<p class="p">No vitals recorded.</p>'}
 
   <h2>2 · Feeding Intake</h2>
-  <div class="tot">Food: <span>${foodMl} / 900 ml</span> &nbsp; Water: <span>${waterMl+medWater(d.medsDone)} / 1000 ml</span></div>
-  <table><thead><tr><th>Session</th><th>Feed (150ml)</th><th>Flush (100ml)</th></tr></thead>
-  <tbody>${d.sessions.map((s,i)=>`<tr><td>Session ${i+1}</td><td class="${s.steps&&s.steps[1]?'g':'p'}">${s.steps&&s.steps[1]?'✓ '+(s.times&&s.times[1]?ft(s.times[1]):''):'—'}</td><td class="${s.steps&&s.steps[2]?'g':'p'}">${s.steps&&s.steps[2]?'✓ '+(s.times&&s.times[2]?ft(s.times[2]):''):'—'}</td></tr>`).join('')}</tbody></table>
+  <div class="tot">Food: <span>${foodMl} / 900 ml</span> &nbsp; Water: <span>${waterMl} / 1200 ml</span></div>
+  <table><thead><tr><th>Session</th><th>Feed (150ml)</th><th>Water (200ml)</th></tr></thead>
+  <tbody>${d.sessions.map((s,i)=>`<tr><td>Session ${i+1}</td><td class="${s.steps&&s.steps[0]?'g':'p'}">${s.steps&&s.steps[0]?'✓ '+(s.times&&s.times[0]?ft(s.times[0]):''):'—'}</td><td class="${s.steps&&s.steps[3]?'g':'p'}">${s.steps&&s.steps[3]?'✓ '+(s.times&&s.times[3]?ft(s.times[3]):''):'—'}</td></tr>`).join('')}</tbody></table>
 
   <h2>3 · Medications &nbsp;<span style="font-size:11px;color:#657085">(${givenCount}/${items.length} given)</span></h2>
   <table><thead><tr><th>Time</th><th>Medication</th><th>Route</th><th>Status</th></tr></thead>
@@ -2155,8 +2083,8 @@ function printReportFor(date,withSupplies){
   <h2>4 · Notes</h2>
   ${dayNotes.length?`<table><thead><tr><th>Time</th><th>Note</th></tr></thead><tbody>${dayNotes.map(n=>`<tr><td>${ft(n.at)}</td><td>${n.text?esc(n.text):''}${n.img?' [photo]':''}</td></tr>`).join('')}</tbody></table>`:'<p class="p">No notes.</p>'}
 
-  ${withSupplies?`<h2>5 · Supplies — Remaining</h2>
-  ${ST.supplies.length?`<table><thead><tr><th>Item</th><th>Remaining</th><th>Total</th></tr></thead><tbody>${ST.supplies.map(s=>`<tr><td>${esc(s.name)}</td><td class="${supRem(s)<=2?'r':''}">${supRem(s)}</td><td>${s.stock||0}</td></tr>`).join('')}</tbody></table>`:'<p class="p">No items.</p>'}`:''}
+  <h2>5 · Supplies — Remaining</h2>
+  ${ST.supplies.length?`<table><thead><tr><th>Item</th><th>Remaining</th><th>Total</th></tr></thead><tbody>${ST.supplies.map(s=>`<tr><td>${esc(s.name)}</td><td class="${supRem(s)<=2?'r':''}">${supRem(s)}</td><td>${s.stock||0}</td></tr>`).join('')}</tbody></table>`:'<p class="p">No items.</p>'}
   </body></html>`);
   w.document.close();setTimeout(()=>w.print(),400);
 }
