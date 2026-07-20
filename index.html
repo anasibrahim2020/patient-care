@@ -1263,7 +1263,8 @@ function rFeed(){
     <div class="prog"><div class="prog-h"><span>${L('تغذية','Food')}</span><span>${foodMl} / 900 ml</span></div><div class="bar"><div class="fill" style="width:${Math.min(100,foodMl/9)}%"></div></div></div>
     ${(function(){const tw=waterMl+medWater();const over=tw>1000,near=tw>900;return `<div class="prog"><div class="prog-h"><span><strong>${L('إجمالي المية اليوم (تغذية + أدوية)','Total water today (feed + meds)')}</strong></span><span style="${near?'color:var(--late);font-weight:800':'font-weight:800'}">${tw} / 1000 ml</span></div><div class="bar"><div class="fill" style="width:${Math.min(100,tw/10)}%;${near?'background:var(--late)':''}"></div></div>${near?`<div class="small" style="color:var(--late);font-weight:700;margin-top:4px">${over?L('تجاوزت حد 1000 مل!','Over the 1000 ml limit!'):L('اقتربت من حد 1000 مل','Approaching the 1000 ml limit')}</div>`:''}</div>`;})()}
   </div>
-  <div class="warn-note"><span class="wm">!</span><span>${L('تحذير: يجب إجلاس المريض بزاوية <strong>40–45°</strong> طوال فترة التغذية ولمدة بعدها — للوقاية من الالتهاب الرئوي الشفطي.','Warning: seat the patient at <strong>40–45°</strong> throughout the feed and for a while after — to prevent aspiration pneumonia.')}</span></div>`;
+  <div class="warn-note"><span class="wm">!</span><span>${L('تحذير: يجب إجلاس المريض بزاوية <strong>40–45°</strong> طوال فترة التغذية ولمدة بعدها — للوقاية من الالتهاب الرئوي الشفطي.','Warning: seat the patient at <strong>40–45°</strong> throughout the feed and for a while after — to prevent aspiration pneumonia.')}</span></div>
+  <div class="warn-note" style="background:var(--accent-l);border-color:#cfe0f5;color:var(--accent-d)"><span class="wm" style="background:var(--accent)">i</span><span>${L('مهم: <strong>رُجّي زجاجة الحليب جيدًا</strong> قبل التغذية و<strong>كل فترة أثناءها</strong> — عشان الحليب ما يترسّبش ويفضل متجانس ولا يسدّ الأنبوب.','Important: <strong>shake the milk bottle well</strong> before feeding and <strong>periodically during it</strong> — so the formula does not settle, stays even, and will not clog the tube.')}</span></div>`;
   ST.sessions.forEach((s,xi)=>{
     const st=sessStatus(s),cnt=s.steps.filter(Boolean).length;
     const pill={done:'p-done',active:'p-due',late:'p-late',upcoming:'p-up'}[st];
@@ -1562,14 +1563,16 @@ function rSupplies(){
           <button type="button" class="seg-b ${supAddType!=='med'?'on':''}" onclick="pickSupType('supply')">${L('مستهلك','Supply')}</button>
         </div>
       </div>
+      <div class="fg"><label>${L('اسم الصنف','Item name')}</label><input id="supName" placeholder="${L('مثال: قفازات','e.g. Gloves')}"></div>
       <div class="grid2">
-        <div class="fg"><label>${L('اسم الصنف','Item name')}</label><input id="supName" placeholder="${L('مثال: علبة قفازات','e.g. Gloves box')}"></div>
-        <div class="fg"><label>${L('العدد الكلي المتاح','Total available')}</label><input id="supQty" type="number" min="0" value="0" dir="ltr"></div>
+        <div class="fg"><label>${L('عدد الباكات','Number of packs')}</label><input id="supPacks" type="number" min="0" value="1" dir="ltr" oninput="updSupTotal()"></div>
+        <div class="fg"><label>${L('وحدات في الباك','Units per pack')}</label><input id="supPer" type="number" min="1" value="1" dir="ltr" oninput="updSupTotal()"></div>
       </div>
+      <div class="small muted" id="supTotalHint" style="margin:-4px 2px 10px;font-weight:700">${L('الإجمالي: 1 وحدة','Total: 1 unit')}</div>
       <button class="btn btn-p w" onclick="addSupply()">${L('إضافة الصنف','Add item')}</button>
     </div>`;
   }else{
-    html+=`<div class="warn-note" style="background:var(--accent-l);border-color:#cfe0f5;color:var(--accent-d)"><span class="wm" style="background:var(--accent)">i</span><span>${L('كل ما تخلص علبة اضغط «خلصت علبة» على البند — والنظام يحسب المستهلك والمتبقي تلقائيًا.','When a box finishes, press "Box finished" on the item — the system tracks used and remaining automatically.')}</span></div>`;
+    html+=`<div class="warn-note" style="background:var(--accent-l);border-color:#cfe0f5;color:var(--accent-d)"><span class="wm" style="background:var(--accent)">i</span><span>${L('سجّل الاستهلاك أول بأول: للأصناف الباكات فيه زرّين — «استهلكت وحدة» (−1) أو «خلصت باك» (−عدد وحدات الباك). والنظام يحسب المتبقي تلقائيًا.','Log usage as you go: pack items have two buttons — "Used 1 unit" (−1) or "Pack done" (−units per pack). The system tracks remaining automatically.')}</span></div>`;
   }
   // search + filter (available to everyone)
   html+=`<div class="card" style="padding:12px 12px 14px">
@@ -1629,8 +1632,8 @@ function rSupply(s){
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
       <div style="min-width:0;flex:1">
         <div style="font-weight:800;font-size:.95rem">${esc(s.name)}${status?` <span class="pill ${showOut?'p-late':'p-due'}" style="margin-inline-start:4px">${status}</span>`:''}</div>
-        <div class="small" style="margin-top:5px;color:${col};font-weight:700">${L('المتبقي','Remaining')}: ${rem} / ${s.stock||0}</div>
-        <div class="small muted" style="margin-top:2px">${L('المستهلك','Used')}: ${s.used||0}</div>
+        <div class="small" style="margin-top:5px;color:${col};font-weight:700">${L('المتبقي','Remaining')}: ${rem} / ${s.stock||0}${s.perPack?packBreak(rem,s.perPack):''}</div>
+        <div class="small muted" style="margin-top:2px">${L('المستهلك','Used')}: ${s.used||0}${s.perPack?` · ${L('الباك','Pack')} = ${s.perPack} ${L('وحدة','units')}`:''}</div>
       </div>
       <div style="flex-shrink:0;text-align:center;min-width:52px">
         <div style="font-weight:800;font-size:1.8rem;color:${showOut?'var(--late)':low?'var(--due)':'var(--ink)'}">${rem}</div>
@@ -1638,8 +1641,13 @@ function rSupply(s){
       </div>
     </div>
     <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-      ${canEdit()?`<button class="btn btn-p btn-sm" style="flex:1;min-width:130px" ${out?'disabled':''} onclick="useBox('${s.id}')">${L('خلصت علبة','Box finished')}</button>`:''}
+      ${canEdit()?((s.perPack&&s.perPack>1)
+        ? `<button class="btn btn-p btn-sm" style="flex:1;min-width:120px" ${out?'disabled':''} onclick="useBox('${s.id}')">${L('استهلكت وحدة','Used 1 unit')} (−1)</button>
+           <button class="btn btn-o btn-sm" style="flex:1;min-width:120px" ${rem<s.perPack?'disabled':''} onclick="usePack('${s.id}')">${L('خلصت باك','Pack done')} (−${s.perPack})</button>`
+        : `<button class="btn btn-p btn-sm" style="flex:1;min-width:130px" ${out?'disabled':''} onclick="useBox('${s.id}')">${L('خلصت علبة','Box finished')}</button>`
+      ):''}
       ${canManage()?`<button class="btn btn-o btn-sm" onclick="restock('${s.id}')">${L('توريد +1','Restock +1')}</button>
+      ${(s.perPack&&s.perPack>1)?`<button class="btn btn-o btn-sm" onclick="restockPack('${s.id}')">${L('توريد باك','Restock pack')} (+${s.perPack})</button>`:''}
       <button class="btn btn-o btn-sm" onclick="editStock('${s.id}')">${L('تعديل','Edit')}</button>
       <button class="btn btn-o btn-sm" onclick="toggleSupType('${s.id}')">${s.type==='med'?L('↦ للمستهلكات','↦ to Supplies'):L('↦ للأدوية','↦ to Meds')}</button>
       <button class="btn btn-d btn-sm" onclick="delSupply('${s.id}')">${L('حذف','Delete')}</button>`:''}
@@ -1647,15 +1655,34 @@ function rSupply(s){
   </div>`;
 }
 function saveSupplies(){if(!requireEditor())return;try{localStorage.setItem('supplies',JSON.stringify(ST.supplies));}catch(e){toast(L('تعذّر الحفظ','Save failed'),'err');}}
+function updSupTotal(){
+  const packs=Math.max(0,parseInt((document.getElementById('supPacks')||{}).value,10)||0);
+  const per=Math.max(1,parseInt((document.getElementById('supPer')||{}).value,10)||1);
+  const tot=packs*per;
+  const el=document.getElementById('supTotalHint');
+  if(el)el.textContent=L('الإجمالي: ','Total: ')+tot+' '+L('وحدة','units')+(per>1?` (${packs} × ${per})`:'');
+}
+// Human-readable pack breakdown, e.g. 27 units, 10/pack → "(2 باك + 7 وحدة)"
+function packBreak(units,per){
+  if(!per||per<=1)return '';
+  const p=Math.floor(units/per),u=units%per,parts=[];
+  if(p)parts.push(p+' '+L('باك','pack'));
+  if(u)parts.push(u+' '+L('وحدة','unit'));
+  return parts.length?` (${parts.join(' + ')})`:'';
+}
 function addSupply(){
   if(!requireManager())return;
   const name=document.getElementById('supName').value.trim();
-  let q=parseInt(document.getElementById('supQty').value,10);if(isNaN(q)||q<0)q=0;
+  let packs=parseInt(document.getElementById('supPacks').value,10);if(isNaN(packs)||packs<0)packs=0;
+  let per=parseInt(document.getElementById('supPer').value,10);if(isNaN(per)||per<1)per=1;
   if(!name){toast(L('اكتب اسم الصنف','Enter item name'),'warn');return;}
   const type=supAddType==='med'?'med':'supply';
-  ST.supplies.push({id:Date.now().toString(36),name,stock:q,used:0,type});
+  const stock=packs*per;
+  const item={id:Date.now().toString(36),name,stock,used:0,type};
+  if(per>1)item.perPack=per;
+  ST.supplies.push(item);
   supAddType='supply';
-  saveSupplies();logAct('supply',(type==='med'?L('إضافة دواء: ','Added medication: '):L('إضافة صنف: ','Added item: '))+name+` (${q})`);
+  saveSupplies();logAct('supply',(type==='med'?L('إضافة دواء: ','Added medication: '):L('إضافة صنف: ','Added item: '))+name+` (${stock}${per>1?` = ${packs}×${per}`:''})`);
   render();toast(L('تمت الإضافة','Added'),'ok');
 }
 function useBox(id){
@@ -1670,10 +1697,29 @@ function useBox(id){
   else if(rem<=2)toast(L(s.name+' — قرب النفاد ('+rem+')','Low: '+s.name+' ('+rem+')'),'warn');
   else toast(L('تم التسجيل','Logged'),'ok');
 }
+function usePack(id){
+  if(!requireEditor())return;
+  const s=ST.supplies.find(x=>x.id===id);if(!s)return;
+  const per=s.perPack||1;
+  if(supRem(s)<=0){toast(L('لا يوجد مخزون متبقٍ','No stock left'),'warn');return;}
+  s.used=(s.used||0)+per;const cap=s.stock||0;if(s.used>cap)s.used=cap;
+  saveSupplies();const rem=supRem(s);
+  logAct('supply',L('خلصت باك: ','Pack used: ')+s.name+` (−${per}) → ${L('المتبقي','remaining')} ${rem}`);
+  render();
+  if(rem===0)toast(L(s.name+' — نفد المخزون','Out of stock: '+s.name),'err');
+  else if(rem<=2)toast(L(s.name+' — قرب النفاد ('+rem+')','Low: '+s.name+' ('+rem+')'),'warn');
+  else toast(L('تم التسجيل','Logged'),'ok');
+}
 function restock(id){
   if(!requireManager())return;
   const s=ST.supplies.find(x=>x.id===id);if(!s)return;
   s.stock=(s.stock||0)+1;saveSupplies();logAct('supply',L('توريد: ','Restock: ')+s.name+' (+1)');render();toast(L('تم التوريد','Restocked'),'ok');
+}
+function restockPack(id){
+  if(!requireManager())return;
+  const s=ST.supplies.find(x=>x.id===id);if(!s)return;
+  const per=s.perPack||1;s.stock=(s.stock||0)+per;saveSupplies();
+  logAct('supply',L('توريد باك: ','Restock pack: ')+s.name+` (+${per})`);render();toast(L('تم التوريد','Restocked'),'ok');
 }
 function toggleSupType(id){
   if(!requireManager())return;
@@ -1684,10 +1730,12 @@ function toggleSupType(id){
 async function editStock(id){
   if(!requireManager())return;
   const s=ST.supplies.find(x=>x.id===id);if(!s)return;
-  const ns=await uiPrompt(L('العدد الكلي المتاح:','Total available:'),{value:s.stock||0,number:true});if(ns===null)return;
-  const nu=await uiPrompt(L('عدد العلب المستهلكة:','Boxes used:'),{value:s.used||0,number:true});if(nu===null)return;
-  let a=parseInt(ns,10),b=parseInt(nu,10);if(isNaN(a)||a<0)a=0;if(isNaN(b)||b<0)b=0;if(b>a)b=a;
-  s.stock=a;s.used=b;saveSupplies();render();toast(L('تم التعديل','Updated'),'ok');
+  const ns=await uiPrompt(L('العدد الكلي المتاح (وحدات):','Total available (units):'),{value:s.stock||0,number:true});if(ns===null)return;
+  const nu=await uiPrompt(L('عدد الوحدات المستهلكة:','Units used:'),{value:s.used||0,number:true});if(nu===null)return;
+  const np=await uiPrompt(L('وحدات في الباك (1 لو مش باكات):','Units per pack (1 if none):'),{value:s.perPack||1,number:true});if(np===null)return;
+  let a=parseInt(ns,10),b=parseInt(nu,10),per=parseInt(np,10);if(isNaN(a)||a<0)a=0;if(isNaN(b)||b<0)b=0;if(b>a)b=a;if(isNaN(per)||per<1)per=1;
+  s.stock=a;s.used=b;if(per>1)s.perPack=per;else delete s.perPack;
+  saveSupplies();render();toast(L('تم التعديل','Updated'),'ok');
 }
 async function delSupply(id){
   if(!requireManager())return;
