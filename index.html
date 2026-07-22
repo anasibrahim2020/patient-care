@@ -486,30 +486,28 @@ function requireManager(){
 // meds stay in English: title = medical name (commercial). care actions are Arabic.
 const SCHED=[
   {t:'06:00',items:[
-    {id:'m0600_neb',cat:'neb',med:'Ipratropium + Sodium Chloride 0.9%',com:'Atrovent + Nebusal',dose:'250 mcg/2 ml + 3 ml',route:'Nebulizer',mix:true},
+    {id:'m0600_neb',cat:'neb',med:'Ipratropium + Sodium Chloride 0.9%',com:'Atrovent + Nebusal',dose:'2 ml + 3 ml',route:'Nebulizer',mix:true},
   ]},
   {t:'07:30',items:[
-    {id:'m0730_lanso',cat:'med',med:'Lansoprazole 30 mg',com:'Lansoprazole Suspension',dose:'10 ml',route:'NG Tube',flush:true,fridge:true,note:{ar:'قبل الأكل — من التلاجة',en:'Before food — from fridge'}},
+    {id:'m0730_lanso',cat:'med',med:'Lansoprazole 30 mg',com:'Lansoprazole Suspension',dose:'10 ml',route:'NG Tube',flush:true,fridge:true,note:{ar:'قبل الأكل بـ30 دقيقة — من التلاجة',en:'30 min before feed — from fridge'}},
   ]},
   {t:'08:00',items:[
-    {id:'m0800_clopi',cat:'med',med:'Clopidogrel 75 mg',com:'Pido 75',dose:'1 Tablet',route:'NG Tube',crush:true,flush:true,dissolve:5},
-    {id:'m0800_lina',cat:'med',med:'Linagliptin 5 mg',com:'Trajenta 5',dose:'1 Tablet',route:'NG Tube',crush:true,flush:true,dissolve:5},
-    {id:'m0800_biso',cat:'med',med:'Bisoprolol 5 mg',dose:'1 Tablet',route:'NG Tube',crush:true,flush:true,dissolve:5},
-    {id:'m0800_keppra',cat:'med',med:'Levetiracetam',com:'Keppra Oral Solution',dose:'7.5 ml',route:'NG Tube',flush:true},
-    {id:'m0800_tears',cat:'eye',med:'Artificial Tears',com:'Alcon',dose:'1 drop / eye',route:'Both Eyes'},
-    {id:'m0800_chlor',cat:'mouth',med:'Chlorhexidine 0.2%',com:'Chlorhexidine Mouth Wash',dose:'oral care',route:'Oral'},
-    {id:'m0800_sime',cat:'med',med:'Simethicone',com:'Flat-Q Oral Drops',dose:'1 ml',route:'NG Tube',flush:true},
-    {id:'m0800_neb',cat:'neb',med:'Ipratropium + Sodium Chloride',com:'Atrovent + Nebusal',route:'Nebulizer',mix:true},
+    {id:'m0800_clopi',cat:'med',med:'Clopidogrel 75 mg',com:'Pido 75',dose:'1 Tablet',route:'NG Tube',crush:true,flush:true,dissolve:5,note:{ar:'بعد الأكل',en:'After feed'}},
+    {id:'m0800_glyco',cat:'med',med:'Glycopyrrolate 1 mg',dose:'1 Tablet',route:'NG Tube',crush:true,flush:true,dissolve:5,note:{ar:'يقلّل الإفرازات',en:'Reduces secretions'}},
+    {id:'m0800_keppra',cat:'med',med:'Levetiracetam 750 mg',com:'Keppra Oral Solution',dose:'7.5 ml',route:'NG Tube',flush:true},
+    {id:'m0800_chlor',cat:'mouth',med:'Chlorhexidine 0.2%',com:'Chlorhexidine Mouth Wash',dose:'oral care',route:'Oral',note:{ar:'باستخدام قطن/شاش',en:'Using cotton/gauze'}},
     {id:'m0800_pos',cat:'care',act:{ar:'تغيير الوضعية',en:'Reposition'},position:{ar:'على الجنب الأيمن',en:'Right Side'}},
   ]},
   {t:'12:00',items:[
     {id:'m1200_neb',cat:'neb',med:'Sodium Chloride 0.9%',com:'Nebusal',dose:'3 ml',route:'Nebulizer'},
     {id:'m1200_pos',cat:'care',act:{ar:'تغيير الوضعية',en:'Reposition'},position:{ar:'على الجنب الأيسر',en:'Left Side'}},
   ]},
-  {t:'13:00',items:[
-    {id:'m1300_tears',cat:'eye',med:'Artificial Tears',com:'Alcon',dose:'1 drop / eye',route:'Both Eyes'},
-    {id:'m1300_sime',cat:'med',med:'Simethicone',com:'Flat-Q Oral Drops',dose:'1 ml',route:'NG Tube',flush:true},
-    {id:'m1300_neb',cat:'neb',med:'Ipratropium Bromide',com:'Atrovent',route:'Nebulizer'},
+  {t:'14:00',items:[
+    {id:'m1400_lina',cat:'med',med:'Linagliptin 5 mg',com:'Trajenta 5',dose:'1 Tablet',route:'NG Tube',crush:true,flush:true,dissolve:5},
+    {id:'m1400_sime',cat:'med',med:'Simethicone 40 mg',com:'Flat-Q Oral Drops',dose:'1 ml',route:'NG Tube',flush:true},
+    {id:'m1400_vitd',cat:'med',med:'Vitamin D3 drops',dose:'per order',route:'NG Tube',flush:true,note:{ar:'يوميًا بعد الضهر',en:'Daily — afternoon'}},
+    {id:'m1400_tears',cat:'eye',med:'Artificial Tears',com:'Alcon',dose:'1 drop / eye',route:'Both Eyes'},
+    {id:'m1400_neb',cat:'neb',med:'Ipratropium Bromide',com:'Atrovent',dose:'2 ml',route:'Nebulizer'},
   ]},
   {t:'16:00',items:[
     {id:'m1600_pos',cat:'care',act:{ar:'تغيير الوضعية',en:'Reposition'},position:{ar:'على الجنب الأيمن',en:'Right Side'}},
@@ -518,15 +516,18 @@ const SCHED=[
     {id:'m1800_neb',cat:'neb',med:'Sodium Chloride 0.9%',com:'Nebusal',dose:'3 ml',route:'Nebulizer'},
   ]},
   {t:'20:00',items:[
-    {id:'m2000_clona',cat:'med',med:'Clonazepam 0.5 mg',com:'Clonotril 0.5',dose:'1 Tablet',route:'NG Tube',crush:true,flush:true,dissolve:2,note:{ar:'يُعطى قبل النوم',en:'Bedtime'}},
-    {id:'m2000_keppra',cat:'med',med:'Levetiracetam',com:'Keppra Oral Solution',dose:'7.5 ml',route:'NG Tube',flush:true},
+    {id:'m2000_chlor',cat:'mouth',med:'Chlorhexidine 0.2%',com:'Chlorhexidine Mouth Wash',dose:'oral care',route:'Oral',note:{ar:'باستخدام قطن/شاش',en:'Using cotton/gauze'}},
+    {id:'m2000_glyco',cat:'med',med:'Glycopyrrolate 1 mg',dose:'1 Tablet',route:'NG Tube',crush:true,flush:true,dissolve:5,note:{ar:'يقلّل الإفرازات',en:'Reduces secretions'}},
+    {id:'m2000_keppra',cat:'med',med:'Levetiracetam 750 mg',com:'Keppra Oral Solution',dose:'7.5 ml',route:'NG Tube',flush:true},
+    {id:'m2000_sime',cat:'med',med:'Simethicone 40 mg',com:'Flat-Q Oral Drops',dose:'1 ml',route:'NG Tube',flush:true},
     {id:'m2000_tears',cat:'eye',med:'Artificial Tears',com:'Alcon',dose:'1 drop / eye',route:'Both Eyes'},
-    {id:'m2000_chlor',cat:'mouth',med:'Chlorhexidine 0.2%',com:'Chlorhexidine Mouth Wash',dose:'oral care',route:'Oral'},
-    {id:'m2000_sime',cat:'med',med:'Simethicone',com:'Flat-Q Oral Drops',dose:'1 ml',route:'NG Tube',flush:true},
     {id:'m2000_pos',cat:'care',act:{ar:'تغيير الوضعية',en:'Reposition'},position:{ar:'على الظهر (Supine)',en:'Back (Supine)'}},
-    {id:'m2000_neb',cat:'neb',med:'Ipratropium + Sodium Chloride',com:'Atrovent + Nebusal',route:'Nebulizer',mix:true},
   ]},
   {t:'22:00',items:[
+    {id:'m2200_clona',cat:'med',med:'Clonazepam 0.5 mg',com:'Clonotril 0.5',dose:'1 Tablet',route:'NG Tube',crush:true,flush:true,dissolve:2,note:{ar:'يُعطى قبل النوم',en:'At bedtime'}},
+    {id:'m2200_sime',cat:'med',med:'Simethicone 40 mg',com:'Flat-Q Oral Drops',dose:'1 ml',route:'NG Tube',flush:true},
+    {id:'m2200_tears',cat:'eye',med:'Artificial Tears',com:'Alcon',dose:'1 drop / eye',route:'Both Eyes'},
+    {id:'m2200_neb',cat:'neb',med:'Ipratropium Bromide',com:'Atrovent',dose:'2 ml',route:'Nebulizer'},
     {id:'m2200_pos',cat:'care',act:{ar:'تغيير الوضعية',en:'Reposition'},position:{ar:'على الجنب الأيسر',en:'Left Side'}},
   ]},
   {t:'00:00',items:[
@@ -540,11 +541,7 @@ const SCHED=[
 function getSlots(){
   const slots=JSON.parse(JSON.stringify(SCHED));
   slots.forEach(s=>{s.items=s.items.filter(itemScheduledToday);});
-  const vd=getVitD();
-  if(vd.dueToday){
-    const s=slots.find(x=>x.t==='08:00');
-    if(s)s.items.push({id:'vitd_monthly',cat:'med',med:'Cholecalciferol (Vitamin D3) 50,000 IU',com:'Vitamin D3',dose:'1 Capsule (monthly)',route:'NG Tube',flush:true,monthly:true});
-  }
+  // Monthly Vitamin D (50,000 IU) removed — the 2026-07 hospital update replaced it with DAILY Vitamin D3 drops (14:00). Re-enable here if the doctor wants both.
   if(new Date().getDay()===0){
     const s=slots.find(x=>x.t==='08:00');
     if(s)s.items.unshift({id:'glucose_sun',cat:'care',act:{ar:'قياس سكر الدم وتسجيل القراءة',en:'Blood Glucose Check — record reading'}});
@@ -1092,12 +1089,11 @@ function ovTile(label,big,sub,flag,tone){
 // ============ REMINDERS TAB ============
 // Date-based reminders (fixed dates + monthly Vit D). Notify 2 days before.
 function reminderList(){
-  const vd=getVitD();
+  // Monthly Vitamin D reminder removed — Vitamin D is now a DAILY afternoon dose (see the schedule).
   return [
     {key:'refill',label:{ar:'صرف/تجديد الأدوية من المستشفى',en:'Hospital medication refill'},date:'2026-08-06'},
     {key:'ngt',label:{ar:'تغيير أنبوب NGT',en:'NGT Change'},date:'2026-08-13'},
     {key:'ttube',label:{ar:'تغيير T-Tube (متابعة أنف وأذن)',en:'T-Tube Change (ENT)'},date:'2026-09-08'},
-    {key:'vitd',label:{ar:'جرعة فيتامين D الشهرية',en:'Monthly Vitamin D dose'},date:vd.next},
   ];
 }
 function rReminders(){
@@ -1342,7 +1338,7 @@ function rInstr(){
         <div style="margin-top:6px"><strong>${L('راحة النيرس (Nurse) بالليل','Nurse night rest')}:</strong> ${L('~7 ساعات ونص متواصلة (10م → 5:30ص). تصحى 5:30ص تعمل الفلش الأخير لأكلة الفجر. قبل النوم تقلّب المريض على جنبه.','~7.5 continuous hours (10pm → 5:30am). Wakes at 5:30am to do the final flush of the Fajr feed. Turns the patient onto their side before sleeping.')}</div>
         <div style="margin-top:6px"><strong>${L('وردية الليل — ماما (Wife)','Night shift — Wife')}:</strong> ${L('تغطّي تغذية 12:30ص كاملة (وهو على جنبه مع رفع الراس — بعد الفلش تنزّل الراس بس بدون تقليب وتنام)، وتقليبة الفجر 4:00ص على ظهره، ثم تبدأ أكلة الفجر 4:30ص (فلش + تبدأ الـ150 مل) وترجع تنام — والنيرس تعمل الفلش الأخير 5:30ص.','Covers the full 12:30am feed (on his side, head raised — after the flush she just lowers the head, no turn, and sleeps), the 4:00am Fajr turn onto his back, then starts the 4:30am feed (flush + start the 150 ml) and goes back to sleep — the Nurse does the final flush at 5:30am.')}</div>
       </div>
-      <div class="note-info" style="margin-top:8px">${L('مواعيد التغذية: 8ص · 11ص · 2م · 5م · 8م · 12:30ص. مواعيد الأدوية: 7:30 · 8ص · 1م · 8م. التفاصيل الكاملة في تبويبَي التغذية والأدوية.','Feed times: 8am · 11am · 2pm · 5pm · 8pm · 12:30am. Med times: 7:30 · 8am · 1pm · 8pm. Full details in the Feeding and Meds tabs.')}</div>
+      <div class="note-info" style="margin-top:8px">${L('مواعيد التغذية (كل 4 ساعات): 12:30ص · 4:30ص · 8:30ص · 12:30م · 4:30م · 8:30م. مواعيد الأدوية: 7:30 · 8ص · 2م · 8م · 10م. التفاصيل الكاملة في تبويبَي التغذية والأدوية.','Feed times (every 4h): 12:30am · 4:30am · 8:30am · 12:30pm · 4:30pm · 8:30pm. Med times: 7:30 · 8am · 2pm · 8pm · 10pm. Full details in the Feeding and Meds tabs.')}</div>
     </div>
 
     <div class="sec-lbl">${L('الشفط والأكسجين','Suctioning & Oxygen')}</div>
