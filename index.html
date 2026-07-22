@@ -502,11 +502,13 @@ const SCHED=[
     {id:'m1200_neb',cat:'neb',med:'Sodium Chloride 0.9%',com:'Nebusal',dose:'3 ml',route:'Nebulizer'},
     {id:'m1200_pos',cat:'care',act:{ar:'تغيير الوضعية',en:'Reposition'},position:{ar:'على الجنب الأيسر',en:'Left Side'}},
   ]},
+  {t:'13:00',items:[
+    {id:'m1300_lina',cat:'med',med:'Linagliptin 5 mg',com:'Trajenta 5',dose:'1 Tablet',route:'NG Tube',crush:true,flush:true,dissolve:5},
+    {id:'m1300_sime',cat:'med',med:'Simethicone 40 mg',com:'Flat-Q Oral Drops',dose:'1 ml',route:'NG Tube',flush:true},
+    {id:'m1300_vitd',cat:'med',med:'Vitamin D3 drops',dose:'per order',route:'NG Tube',flush:true,note:{ar:'يوميًا بعد الضهر',en:'Daily — afternoon'}},
+    {id:'m1300_tears',cat:'eye',med:'Artificial Tears',com:'Alcon',dose:'1 drop / eye',route:'Both Eyes'},
+  ]},
   {t:'14:00',items:[
-    {id:'m1400_lina',cat:'med',med:'Linagliptin 5 mg',com:'Trajenta 5',dose:'1 Tablet',route:'NG Tube',crush:true,flush:true,dissolve:5},
-    {id:'m1400_sime',cat:'med',med:'Simethicone 40 mg',com:'Flat-Q Oral Drops',dose:'1 ml',route:'NG Tube',flush:true},
-    {id:'m1400_vitd',cat:'med',med:'Vitamin D3 drops',dose:'per order',route:'NG Tube',flush:true,note:{ar:'يوميًا بعد الضهر',en:'Daily — afternoon'}},
-    {id:'m1400_tears',cat:'eye',med:'Artificial Tears',com:'Alcon',dose:'1 drop / eye',route:'Both Eyes'},
     {id:'m1400_neb',cat:'neb',med:'Ipratropium Bromide',com:'Atrovent',dose:'2 ml',route:'Nebulizer'},
   ]},
   {t:'16:00',items:[
@@ -521,12 +523,10 @@ const SCHED=[
     {id:'m2000_keppra',cat:'med',med:'Levetiracetam 750 mg',com:'Keppra Oral Solution',dose:'7.5 ml',route:'NG Tube',flush:true},
     {id:'m2000_sime',cat:'med',med:'Simethicone 40 mg',com:'Flat-Q Oral Drops',dose:'1 ml',route:'NG Tube',flush:true},
     {id:'m2000_tears',cat:'eye',med:'Artificial Tears',com:'Alcon',dose:'1 drop / eye',route:'Both Eyes'},
+    {id:'m2000_clona',cat:'med',med:'Clonazepam 0.5 mg',com:'Clonotril 0.5',dose:'1 Tablet',route:'NG Tube',crush:true,flush:true,dissolve:2,note:{ar:'جرعة النوم — تعطيها الممرضة قبل نهاية شيفتها',en:'Bedtime dose — nurse gives it before her shift ends'}},
     {id:'m2000_pos',cat:'care',act:{ar:'تغيير الوضعية',en:'Reposition'},position:{ar:'على الظهر (Supine)',en:'Back (Supine)'}},
   ]},
   {t:'22:00',items:[
-    {id:'m2200_clona',cat:'med',med:'Clonazepam 0.5 mg',com:'Clonotril 0.5',dose:'1 Tablet',route:'NG Tube',crush:true,flush:true,dissolve:2,note:{ar:'يُعطى قبل النوم',en:'At bedtime'}},
-    {id:'m2200_sime',cat:'med',med:'Simethicone 40 mg',com:'Flat-Q Oral Drops',dose:'1 ml',route:'NG Tube',flush:true},
-    {id:'m2200_tears',cat:'eye',med:'Artificial Tears',com:'Alcon',dose:'1 drop / eye',route:'Both Eyes'},
     {id:'m2200_neb',cat:'neb',med:'Ipratropium Bromide',com:'Atrovent',dose:'2 ml',route:'Nebulizer'},
     {id:'m2200_pos',cat:'care',act:{ar:'تغيير الوضعية',en:'Reposition'},position:{ar:'على الجنب الأيسر',en:'Left Side'}},
   ]},
@@ -1338,7 +1338,7 @@ function rInstr(){
         <div style="margin-top:6px"><strong>${L('راحة النيرس (Nurse) بالليل','Nurse night rest')}:</strong> ${L('~7 ساعات ونص متواصلة (10م → 5:30ص). تصحى 5:30ص تعمل الفلش الأخير لأكلة الفجر. قبل النوم تقلّب المريض على جنبه.','~7.5 continuous hours (10pm → 5:30am). Wakes at 5:30am to do the final flush of the Fajr feed. Turns the patient onto their side before sleeping.')}</div>
         <div style="margin-top:6px"><strong>${L('وردية الليل — ماما (Wife)','Night shift — Wife')}:</strong> ${L('تغطّي تغذية 12:30ص كاملة (وهو على جنبه مع رفع الراس — بعد الفلش تنزّل الراس بس بدون تقليب وتنام)، وتقليبة الفجر 4:00ص على ظهره، ثم تبدأ أكلة الفجر 4:30ص (فلش + تبدأ الـ150 مل) وترجع تنام — والنيرس تعمل الفلش الأخير 5:30ص.','Covers the full 12:30am feed (on his side, head raised — after the flush she just lowers the head, no turn, and sleeps), the 4:00am Fajr turn onto his back, then starts the 4:30am feed (flush + start the 150 ml) and goes back to sleep — the Nurse does the final flush at 5:30am.')}</div>
       </div>
-      <div class="note-info" style="margin-top:8px">${L('مواعيد التغذية (كل 4 ساعات): 12:30ص · 4:30ص · 8:30ص · 12:30م · 4:30م · 8:30م. مواعيد الأدوية: 7:30 · 8ص · 2م · 8م · 10م. التفاصيل الكاملة في تبويبَي التغذية والأدوية.','Feed times (every 4h): 12:30am · 4:30am · 8:30am · 12:30pm · 4:30pm · 8:30pm. Med times: 7:30 · 8am · 2pm · 8pm · 10pm. Full details in the Feeding and Meds tabs.')}</div>
+      <div class="note-info" style="margin-top:8px">${L('مواعيد التغذية (كل 4 ساعات): 12:30ص · 4:30ص · 8:30ص · 12:30م · 4:30م · 8:30م. مواعيد الأدوية (كلها في شيفت الممرضة): 7:30 · 8ص · 1م · 8م. التفاصيل الكاملة في تبويبَي التغذية والأدوية.','Feed times (every 4h): 12:30am · 4:30am · 8:30am · 12:30pm · 4:30pm · 8:30pm. Med times (all in the nurse shift): 7:30 · 8am · 1pm · 8pm. Full details in the Feeding and Meds tabs.')}</div>
     </div>
 
     <div class="sec-lbl">${L('الشفط والأكسجين','Suctioning & Oxygen')}</div>
